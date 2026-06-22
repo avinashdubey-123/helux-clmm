@@ -1,0 +1,19 @@
+[tool-chain]
+solana-version = "2.3.0"
+anchor_version = "0.32.1"
+
+[features]
+seeds = false
+
+[programs.localnet]
+amm_v3 = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"
+
+[programs.devnet]
+amm_v3 = "HxfQdbYzW1fgh4NiC4NFo7A13Nf5Nch3D4DNNnwYYnrh"
+
+[registry]
+url = "https://github.com/raydium-io/raydium-amm-v3"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/anchor-base.json"
