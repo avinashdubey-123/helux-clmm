@@ -1,0 +1,204 @@
+.tx-card {
+  background: #1a1f2e;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  border: 1px solid #2d3748;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.tx-card__progress-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  pointer-events: none;
+  transform-origin: right center;
+}
+
+.tx-card__progress-bar--timed {
+  animation: tx-card-progress-shrink var(--tx-card-lifetime) linear forwards;
+}
+
+.tx-card__progress-bar--info {
+  width: 100%;
+}
+
+.tx-card--success .tx-card__progress-bar {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+.tx-card--error .tx-card__progress-bar {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+}
+
+.tx-card--info .tx-card__progress-bar {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+}
+
+@keyframes tx-card-progress-shrink {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.tx-card {
+  transition: opacity var(--tx-card-close-duration, 260ms) ease, transform var(--tx-card-close-duration, 260ms) ease;
+}
+
+.tx-card--closing {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.995);
+}
+
+.tx-card--success {
+  border-left: 4px solid #10b981;
+}
+
+.tx-card--error {
+  border-left: 4px solid #ef4444;
+}
+
+.tx-card--info {
+  border-left: 4px solid #3b82f6;
+}
+
+.tx-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tx-card__status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.tx-card__badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  min-width: 42px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tx-card__text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.tx-card--success .tx-card__badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.tx-card--error .tx-card__badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.tx-card--info .tx-card__badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.tx-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f7fafc;
+  margin-bottom: 4px;
+}
+
+.tx-card__message {
+  font-size: 14px;
+  color: #a0aec0;
+  line-height: 1.4;
+}
+
+.tx-card__close {
+  background: none;
+  border: none;
+  color: #718096;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.tx-card__close:hover {
+  background: #2d3748;
+  color: #e2e8f0;
+}
+
+.tx-card__link {
+  display: inline-block;
+  margin-top: 12px;
+  color: #63b3ed;
+  font-size: 13px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.tx-card__link:hover {
+  color: #90cdf4;
+  text-decoration: underline;
+}
+
+.tx-card__details {
+  margin-top: 14px;
+}
+
+.tx-card__details-btn {
+  background: var(--btn-outline-bg);
+  border: 1px solid var(--btn-outline-border);
+  color: var(--btn-outline-text);
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background var(--btn-transition), border-color var(--btn-transition), color var(--btn-transition), box-shadow var(--btn-transition), transform var(--btn-transition);
+}
+
+.tx-card__details-btn:hover {
+  background: var(--btn-outline-hover-bg);
+  border-color: var(--btn-outline-hover-border);
+}
+
+.tx-card__details-btn:active {
+  background: var(--btn-outline-active-bg);
+  border-color: var(--btn-outline-active-border);
+}
+
+.tx-card__details-pre {
+  margin-top: 12px;
+  padding: 12px;
+  background: #0d1117;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #c9d1d9;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+}

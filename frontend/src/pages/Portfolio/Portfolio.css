@@ -1,0 +1,928 @@
+.portfolio-page {
+  min-height: 100vh;
+  padding: 112px 40px 72px;
+  background: #0b1221;
+  color: #c8d4e8;
+  font-family: inherit;
+}
+
+.portfolio-hero {
+  margin: 0 auto 28px;
+  text-align: left;
+}
+
+.portfolio-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  padding-right: 2px;
+  padding-bottom: 8px;
+  background: linear-gradient(120deg,
+      #39d0d8 0%,
+      #2b6cb0 10%,
+      #d000ffce 30%,
+      #39d0d8 45%,
+      #2b6cb0 60%,
+      #d000ffce 80%,
+      #39d0d8 100%);
+  background-size: 200% auto;
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+
+  animation: shine-rtl 10s linear infinite;
+}
+
+@keyframes shine-rtl {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.portfolio-subtitle {
+  color: #7a8fa6;
+  font-size: 14px;
+  margin: 0;
+}
+
+.portfolio-tabs-container {
+  margin: 0 auto 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e2d45;
+  padding-bottom: 12px;
+}
+
+.portfolio-tabs {
+  display: flex;
+  gap: 24px;
+}
+
+.portfolio-tab {
+  background: none;
+  border: none;
+  color: #7a8fa6;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.portfolio-tab:hover {
+  color: #c8d4e8;
+}
+
+.portfolio-tab.active {
+  color: #39d0d8;
+}
+
+.portfolio-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -13px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #39d0d8;
+  box-shadow: 0 0 10px rgba(57, 208, 216, 0.5);
+}
+
+.portfolio-collect-btn:hover {
+  filter: brightness(1.2);
+}
+
+.portfolio-collect-btn:active {
+  filter: brightness(0.8);
+}
+
+/* Invested Tab */
+.portfolio-invested-tab,
+.portfolio-liquidity-tab,
+.portfolio-activity-tab {
+  margin: 0 auto;
+}
+
+.portfolio-summary-card {
+  background: #0f1929;
+  border: 1px solid #1a2640;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+}
+
+.portfolio-summary-card h2 {
+  font-size: 18px;
+  margin: 0 0 20px;
+  color: #e6f0ff;
+}
+
+.portfolio-stat-box {
+  background: #0f1929;
+  border: 1px solid #1a2640;
+  border-radius: 8px;
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.portfolio-stat-box:hover {
+  border-color: #39d0d8;
+  background: #17243b;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #7a8fa6;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e6f0ff;
+}
+
+.stat-link {
+  font-size: 12px;
+  color: #39d0d8;
+  margin-top: 4px;
+}
+
+/* Liquidity Tab */
+.portfolio-search-bar {
+  margin-bottom: 24px;
+  width: 540px;
+}
+
+.portfolio-search-bar input {
+  background: #131c2e;
+  border: 1px solid #1e2d45;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #c8d4e8;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.portfolio-search-bar input:focus {
+  border-color: #39d0d8;
+}
+
+.portfolio-pools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.portfolio-pool-card {
+  background: #131c2e;
+  border: 1px solid #1e2d45;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.portfolio-pool-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1a2640;
+}
+
+.pool-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pool-icons {
+  display: flex;
+  align-items: center;
+}
+
+.pool-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid #131c2e;
+}
+
+.pool-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e6f0ff;
+}
+
+.portfolio-view-details {
+  background: none;
+  border: none;
+  color: #7a8fa6;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.portfolio-positions-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.portfolio-position-row {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1a2640;
+}
+
+.portfolio-position-row:last-child {
+  border-bottom: none;
+}
+
+.position-range-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 40%;
+}
+
+.position-range-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6f0ff;
+}
+
+.position-status-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  width: 98px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.position-status-badge.in-range {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.position-status-badge.out-range {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.in-range .status-dot {
+  background: #10b981;
+}
+
+.out-range .status-dot {
+  background: #ef4444;
+}
+
+.position-amounts-col {
+  width: 30%;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c8d4e8;
+}
+
+.position-actions-col {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  width: 30%;
+}
+
+.pos-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.pos-btn-deposit {
+  background: #0b1221;
+  color: #39d0d8;
+  border: 1px solid #39d0d8;
+}
+
+.pos-btn-withdraw {
+  background: #39d0d8;
+  color: #0b1221;
+  border: 1px solid #39d0d8;
+}
+
+.pos-btn:hover {
+  filter: brightness(0.8);
+}
+
+.portfolio-tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portfolio-token-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #131c2e;
+  border: 1px solid #1a2640;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.token-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.token-row-right .token-pools-link {
+  background: none;
+  border: 1px solid #39d0d8;
+  color: #39d0d8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  width: fit-content;
+  transition: all 0.2s ease;
+}
+
+.token-row-right .token-pools-link:hover {
+  filter: brightness(0.8);
+}
+
+.portfolio-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portfolio-tx-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #131c2e;
+  border: 1px solid #1a2640;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tx-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tx-desc {
+  font-size: 14px;
+  color: #e6f0ff;
+  font-weight: 600;
+}
+
+.tx-time {
+  font-size: 12px;
+  color: #7a8fa6;
+}
+
+.tx-link {
+  font-size: 13px;
+  color: #9945ff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.tx-link:hover {
+  text-decoration: underline;
+}
+
+/* Modals */
+.portfolio-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portfolio-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.portfolio-modal-content {
+  position: relative;
+  background: #0f1929;
+  border: 1px solid #1a2640;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.portfolio-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #7a8fa6;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.portfolio-modal-close:hover {
+  color: #e6f0ff;
+}
+
+.portfolio-modal-header {
+  padding: 24px;
+  background: #131c2e;
+  border-bottom: 1px solid #1a2640;
+}
+
+.portfolio-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #e6f0ff;
+}
+
+.deposit-overlay-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deposit-overlay-label {
+  font-size: 12px;
+  color: #7a8fa6;
+  text-transform: uppercase;
+}
+
+.deposit-overlay-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6f0ff;
+}
+
+
+.portfolio-modal-body {
+  padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.portfolio-modal-body h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #c8d4e8;
+}
+
+.deposit-balance-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #7a8fa6;
+}
+
+.wallet-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.deposit-quick-btn {
+  background: rgba(57, 208, 216, 0.1);
+  color: #39d0d8;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.deposit-quick-btn:hover {
+  background: rgba(57, 208, 216, 0.2);
+}
+
+.deposit-input-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.portfolio-error-msg {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.withdraw-slider-container {
+  margin-bottom: 24px;
+}
+
+.withdraw-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.withdraw-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1a2640;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  transition: background 0.1s;
+}
+
+.withdraw-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #39d0d8;
+  cursor: pointer;
+}
+
+.withdraw-slider-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #7a8fa6;
+}
+
+.withdraw-slider-marks span {
+  cursor: pointer;
+}
+
+.withdraw-slider-marks span:hover {
+  color: #e6f0ff;
+}
+
+/* Utilities replacing inline styles */
+.portfolio-tokens-header {
+  color: #e6f0ff;
+}
+
+.portfolio-empty-state {
+  color: #7a8fa6;
+}
+
+.token-name-strong {
+  color: #e6f0ff;
+}
+
+.portfolio-empty-activity {
+  text-align: center;
+  color: #7a8fa6;
+  padding: 20px 0;
+}
+
+.portfolio-loader-container {
+  text-align: center;
+  padding: 40px;
+}
+
+.portfolio-error-container {
+  text-align: center;
+  padding: 40px;
+  color: #ff4d4f;
+}
+
+.portfolio-empty-container {
+  text-align: center;
+  padding: 40px;
+  color: #7a8fa6;
+}
+
+.pool-header-clickable {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+.pool-icon-primary {
+  z-index: 1;
+}
+
+.pool-icon-secondary {
+  margin-left: -10px;
+}
+
+.pool-positions-count {
+  margin-left: 12px;
+  color: #7a8fa6;
+  font-size: 14px;
+}
+
+.pool-chevron {
+  font-size: 18px;
+  color: #39d0d8;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.pool-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.portfolio-positions-list-expanded {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.portfolio-position-card {
+  background: #0b1221;
+  border-radius: 8px;
+  border: 1px solid #1a2640;
+  overflow: hidden;
+}
+
+.portfolio-position-summary {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.position-status-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.position-badge-margin {
+  margin-top: 4px;
+}
+
+.position-amounts-center {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6f0ff;
+}
+
+.position-amount-divider {
+  margin: 0 8px;
+  color: #4a5a70;
+}
+
+.position-actions-right {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.position-chevron {
+  transition: transform 0.2s;
+  display: inline-block;
+  margin-left: 12px;
+  color: #7a8fa6;
+}
+
+.position-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.portfolio-position-details {
+  padding: 20px 20px 20px;
+  border-top: 1px solid #1a2640;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pos-details-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-details-label {
+  font-size: 12px;
+  color: #7a8fa6;
+  margin-bottom: 4px;
+}
+
+.pos-details-value {
+  font-size: 14px;
+  color: #e6f0ff;
+}
+
+.pos-details-right {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-close-position {
+  font-size: 14px;
+  width: auto;
+  background:transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.btn-close-position.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.portfolio-modal-header-stats-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.modal-token-top-between {
+  justify-content: space-between;
+}
+
+.modal-deposit-plus {
+  text-align: center;
+  font-size: 24px;
+  margin: 8px 0;
+  color: #7a8fa6;
+}
+
+.modal-deposit-total {
+  margin-top: 24px;
+}
+
+.modal-submit-btn {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.modal-withdraw-subtitle {
+  color: #7a8fa6;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.modal-withdraw-pct {
+  color: #39d0d8;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.modal-withdraw-amounts-card {
+  margin-top: 24px;
+  background: #0f1929;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #1a2640;
+}
+
+.modal-withdraw-amounts-title {
+  margin: 0 0 16px;
+  color: #e6f0ff;
+  font-size: 16px;
+}
+
+.modal-withdraw-amounts-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.modal-withdraw-amounts-row.last {
+  margin-bottom: 0;
+}
+.portfolio-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, #39d0d8 0%, #2f8aa4 100%);
+  color: #081120;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.portfolio-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.portfolio-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.portfolio-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.portfolio-token-locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 18, 33, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 18px;
+  z-index: 10;
+  text-align: center;
+  padding: 16px;
+}
+
+.portfolio-token-locked-icon {
+  font-size: 24px;
+}
+
+.portfolio-token-locked-title {
+  color: #e6f0ff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.portfolio-token-locked-desc {
+  color: #7a8fa6;
+  font-size: 12px;
+  max-width: 80%;
+}
+
+.is-locked-blur {
+  filter: blur(4px);
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}

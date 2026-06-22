@@ -1,0 +1,1128 @@
+.clmm-page {
+  min-height: 100vh;
+  padding: clamp(88px, 9vw, 112px) clamp(16px, 2.8vw, 28px) clamp(56px, 5vw, 72px);
+  color: #d8e5ff;
+  background:
+    radial-gradient(circle at top left, rgba(70, 154, 255, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(57, 208, 216, 0.14), transparent 24%),
+    linear-gradient(180deg, #0a1020 0%, #07101d 100%);
+}
+
+.clmm-form-top {
+  max-width: 1280px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.clmm-back-link {
+  color: #8ea4c4;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.clmm-back-link:hover {
+  color: #f4f8ff;
+}
+
+.clmm-form-title {
+  color: #f4f8ff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.deposit-shell {
+  width: min(100%, 1280px);
+  margin: 0 auto;
+}
+
+.deposit-hero-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  background: rgba(16, 25, 45, 0.84);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+  margin-bottom: 18px;
+}
+
+.deposit-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.deposit-pool-icons {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.deposit-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #0a1020;
+}
+
+.deposit-icon-a {
+  background: linear-gradient(135deg, #39d0d8, #2b6cb0);
+}
+
+.deposit-icon-b {
+  margin-left: -10px;
+  background: linear-gradient(135deg, #9945ff, #14f195);
+}
+
+.deposit-hero-copy {
+  min-width: 0;
+}
+
+.deposit-pool-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.deposit-pool-name-row h1 {
+  margin: 0;
+  color: #f4f8ff;
+  font-size: clamp(22px, 2vw, 30px);
+  line-height: 1.1;
+}
+
+.deposit-fee-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(90, 106, 146, 0.42);
+  color: #c7d4ef;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.deposit-hero-copy p {
+  margin: 8px 0 0;
+  color: #87a0c5;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.deposit-hero-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.deposit-hero-stats>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 132px;
+}
+
+.deposit-hero-stats span,
+.deposit-chart-legend span,
+.deposit-total-card span,
+.deposit-range-field span,
+.deposit-panel-head p,
+.deposit-token-sub {
+  color: #87a0c5;
+  font-size: 12px;
+}
+
+.deposit-hero-stats strong,
+.deposit-chart-legend strong,
+.deposit-total-card strong,
+.deposit-apr-body strong {
+  color: #f4f8ff;
+  font-size: 14px;
+}
+
+.deposit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.deposit-panel {
+  position: relative;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(14, 22, 39, 0.92);
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+.deposit-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deposit-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.deposit-panel-head h2 {
+  margin: 0;
+  color: #f4f8ff;
+  font-size: 20px;
+}
+
+.deposit-panel-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(90, 106, 146, 0.42);
+  color: #c7d4ef;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.deposit-panel-range {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deposit-chart-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(8, 15, 28, 0.86);
+  border: 1px solid rgba(36, 50, 79, 0.9);
+}
+
+/* recharts area wrapper */
+.deposit-chart-card .recharts-wrapper {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Y-axis title above the chart */
+.chart-axis-labels {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 4px;
+}
+
+.chart-y-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5a7a9c;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-left: 38px;
+}
+
+/* Custom tooltip */
+.chart-tooltip {
+  background: rgba(10, 18, 38, 0.96);
+  border: 1px solid rgba(57, 208, 216, 0.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  color: #8ea4c4;
+}
+
+.chart-tooltip-row+.chart-tooltip-row {
+  margin-top: 4px;
+}
+
+.chart-tooltip-row strong {
+  color: #d8e5ff;
+  font-weight: 700;
+}
+
+/* drag handles are no longer used in recharts chart – keep stub for future use */
+
+.deposit-price-toggle {
+  border: 1px solid rgba(125, 92, 255, 0.4);
+  background: rgba(125, 92, 255, 0.12);
+  color: #f0e8ff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.deposit-price-toggle:hover {
+  background: rgba(125, 92, 255, 0.18);
+}
+
+/* .deposit-range-line replaced by ReferenceLine in recharts */
+
+.deposit-chart-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+/* Hover trigger for pool details */
+.pool-hover-trigger {
+  position: relative;
+  display: inline-block;
+}
+
+.pool-hover-trigger .pool-hover-card {
+  display: none;
+  position: absolute;
+  top: 110%;
+  left: 0;
+  z-index: 10;
+}
+
+.pool-hover-trigger:hover .pool-hover-card {
+  display: block;
+}
+
+/* ── Inline token badge: sphere + name ── */
+.df-token-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.df-sphere {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 11px;
+  color: #fff;
+  border: 2px solid rgba(8, 15, 28, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.df-token-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8d8f0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.deposit-chart-legend>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deposit-range-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.deposit-range-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deposit-range-field input {
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  background: rgba(8, 15, 28, 0.9);
+  color: #f4f8ff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
+  outline: none;
+}
+
+.deposit-range-field input:focus {
+  border-color: rgba(57, 208, 216, 0.8);
+  box-shadow: 0 0 0 3px rgba(57, 208, 216, 0.12);
+}
+
+.deposit-range-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.deposit-range-pill,
+.deposit-range-reset {
+  border: 1px solid rgba(76, 95, 131, 0.85);
+  background: rgba(10, 18, 33, 0.88);
+  color: #90a6c6;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.deposit-range-pill.active {
+  border-color: rgba(180, 194, 229, 0.95);
+  color: #e8f0ff;
+}
+
+.deposit-range-reset {
+  border: 0;
+  background: transparent;
+  padding-inline: 4px;
+}
+
+.deposit-apr-card {
+  border-radius: 18px;
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  background: rgba(8, 15, 28, 0.78);
+  padding: 16px;
+}
+
+.deposit-apr-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.deposit-apr-head strong {
+  color: #dce7ff;
+  font-size: 15px;
+}
+
+.deposit-apr-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.deposit-panel-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deposit-panel-amount.is-locked .deposit-panel-content {
+  filter: blur(4px);
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+
+.deposit-panel-lock {
+  position: absolute;
+  inset: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 18px;
+  background: rgba(7, 12, 24, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 143, 208, 0.22);
+  text-align: center;
+  z-index: 2;
+}
+
+.deposit-panel-lock-badge {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 143, 208, 0.22), rgba(125, 92, 255, 0.18));
+  color: #ffd7ef;
+  font-size: 26px;
+  box-shadow: 0 0 0 1px rgba(255, 143, 208, 0.2), 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.deposit-panel-lock-title {
+  color: #ffeef8;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.deposit-panel-lock-copy {
+  max-width: 280px;
+  color: #9fb0d1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.deposit-panel-amount.is-locked .deposit-submit {
+  pointer-events: none;
+}
+
+.deposit-panel-amount.is-locked .deposit-token-card,
+.deposit-panel-amount.is-locked .deposit-total-card,
+.deposit-panel-amount.is-locked .deposit-submit {
+  filter: saturate(0.7);
+}
+
+.deposit-token-card {
+  border-radius: 18px;
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  background: rgba(8, 15, 28, 0.86);
+  padding: 14px 16px 16px;
+}
+
+.deposit-token-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.deposit-token-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.deposit-token-badge {
+  color: #8fa5c7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.deposit-token-meta button {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7b8baa;
+  background: rgba(69, 82, 117, 0.48);
+}
+
+.deposit-token-balance {
+  color: #dce7ff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.deposit-token-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.deposit-token-symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.deposit-token-symbol strong {
+  color: #f4f8ff;
+  font-size: 18px;
+}
+
+.deposit-token-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-0 {
+  background: linear-gradient(135deg, #39d0d8, #2b6cb0);
+}
+
+.dot-1 {
+  background: linear-gradient(135deg, #7d5cff, #ff8fd0);
+}
+
+.deposit-token-row input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #f4f8ff;
+  text-align: right;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.deposit-token-row input:focus {
+  color: #dffcff;
+}
+
+.deposit-token-sub {
+  margin-top: 6px;
+  text-align: right;
+}
+
+.deposit-plus {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(180, 194, 229, 0.2);
+  color: #dffcff;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.deposit-total-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(91, 103, 136, 0.26);
+}
+
+.deposit-total-card>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deposit-submit {
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, #2b7f95 0%, #2f8aa4 100%);
+  color: #081120;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.deposit-submit:disabled {
+  opacity: 0.55;
+}
+
+.clmm-page .tx-card {
+  margin-top: 16px;
+}
+
+@media (max-width: 1120px) {
+
+  .deposit-grid,
+  .deposit-hero-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .deposit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .deposit-hero-stats {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 960px) {
+  .deposit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .deposit-chart-bars {
+    height: clamp(180px, 42vw, 220px);
+  }
+
+  .deposit-total-card {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 780px) {
+  .clmm-page {
+    padding: 96px 16px 56px;
+  }
+
+  .deposit-grid,
+  .deposit-range-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .deposit-panel-head,
+  .deposit-token-row,
+  .deposit-total-card,
+  .deposit-apr-head,
+  .deposit-hero-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .deposit-token-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .deposit-token-meta {
+    justify-content: flex-start;
+  }
+
+  .deposit-token-balance,
+  .deposit-token-sub,
+  .deposit-token-row input {
+    text-align: left;
+  }
+
+  .deposit-token-row input {
+    text-align: left;
+    font-size: 28px;
+  }
+
+  .deposit-range-pills {
+    gap: 8px;
+  }
+
+  .deposit-range-pill,
+  .deposit-range-reset {
+    padding-inline: 10px;
+  }
+}
+
+/* ── Symbol sphere icons ── */
+.deposit-hover-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.deposit-pool-icons {
+  display: flex;
+  align-items: center;
+}
+
+.deposit-symbol-sphere {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  border: 2px solid rgba(8, 15, 28, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+/* sphere colors are now set via inline style (mint-derived hsl) */
+.deposit-sphere-a {
+  z-index: 1;
+}
+
+.deposit-sphere-b {
+  margin-left: -12px;
+}
+
+/* ── Pool hover card ── */
+.deposit-hover-card {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  z-index: 200;
+  min-width: 300px;
+  padding: 12px 14px;
+  background: rgba(14, 22, 40, 0.97);
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: #e6f0ff;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: auto;
+}
+
+.deposit-hover-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  word-break: break-all;
+}
+
+.deposit-hover-row+.deposit-hover-row {
+  margin-top: 8px;
+}
+
+.deposit-hover-card strong {
+  color: #39d0d8;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.deposit-copy-btn {
+  background: rgba(57, 208, 216, 0.08);
+  border: 1px solid #39d0d8;
+  color: #39d0d8;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.12s, transform 0.08s;
+}
+
+.deposit-copy-btn img {
+  width: 14px;
+  height: 14px;
+}
+
+.deposit-copy-btn:hover {
+  background: #39d0d8;
+  color: #061014;
+}
+
+.deposit-copy-btn:active {
+  transform: scale(0.95);
+}
+
+.copy-status-inline {
+  font-size: 12px;
+  color: #14f195;
+  font-weight: 700;
+}
+
+/* ── Chart: INVALID tag (legacy) ── */
+.deposit-range-invalid-tag {
+  display: none;
+}
+
+/* ── Chart container for drag handle positioning ── */
+.deposit-chart-container {
+  position: relative;
+}
+
+/* ── Draggable tick handles ── */
+.chart-drag-handle {
+  position: absolute;
+  top: 8px;
+  bottom: 44px;
+  /* above X-axis */
+  width: 2px;
+  cursor: ew-resize;
+  z-index: 10;
+  transform: translateX(-50%);
+  touch-action: none;
+}
+
+.chart-drag-handle-line {
+  position: absolute;
+  inset: 0;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(57, 208, 216, 0.9), rgba(57, 208, 216, 0.3));
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.chart-drag-handle-lower .chart-drag-handle-line {
+  background: linear-gradient(180deg, rgba(20, 241, 149, 0.9), rgba(20, 241, 149, 0.3));
+}
+
+.chart-drag-handle-upper .chart-drag-handle-line {
+  background: linear-gradient(180deg, rgba(20, 241, 149, 0.9), rgba(20, 241, 149, 0.3));
+}
+
+.chart-drag-handle-grip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(14, 22, 40, 0.95);
+  border: 1.5px solid rgba(20, 241, 149, 0.6);
+  color: #14f195;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  cursor: ew-resize;
+}
+
+.chart-drag-handle:hover .chart-drag-handle-grip {
+  background: rgba(20, 241, 149, 0.15);
+  border-color: #14f195;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.chart-drag-handle:active .chart-drag-handle-grip {
+  background: rgba(20, 241, 149, 0.25);
+  border-color: #14f195;
+}
+
+/* ── Chart empty state ── */
+.chart-empty-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: #5a7a9c;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ── Disabled input styling for single-sided mode ── */
+.deposit-input-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: rgba(30, 40, 60, 0.5) !important;
+}
+
+
+/* ── NFT Minted Overlay ── */
+.nft-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.nft-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 20, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.nft-overlay-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 440px);
+  border-radius: 24px;
+  padding: 36px 32px 28px;
+  background: linear-gradient(160deg, rgba(15, 24, 50, 0.98) 0%, rgba(8, 14, 32, 0.98) 100%);
+  border: 1px solid rgba(57, 208, 216, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(57, 208, 216, 0.08),
+    0 32px 80px rgba(0, 0, 0, 0.65),
+    0 0 60px rgba(57, 208, 216, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  animation: overlayIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.nft-overlay-glow {
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(20, 241, 149, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.nft-overlay-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: rgba(57, 208, 216, 0.1);
+  border: 1px solid rgba(57, 208, 216, 0.3);
+  color: #8ea4c4;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nft-overlay-close:hover {
+  background: rgba(57, 208, 216, 0.22);
+  color: #d8f8ff;
+}
+
+.nft-overlay-icon {
+  font-size: 52px;
+  line-height: 1;
+  filter: drop-shadow(0 0 16px rgba(20, 241, 149, 0.5));
+}
+
+.nft-overlay-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #f4f8ff;
+  letter-spacing: -0.3px;
+}
+
+.nft-overlay-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #7a98c2;
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.nft-overlay-detail {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(57, 208, 216, 0.07);
+  border: 1px solid rgba(57, 208, 216, 0.15);
+}
+
+.nft-detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a7a9c;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.nft-detail-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c8d8f0;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+  text-align: right;
+}
+
+.nft-overlay-explorer-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #39d0d8, #14f195);
+  color: #061014;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  display: block;
+  text-align: center;
+  transition: opacity 0.15s, transform 0.12s;
+  letter-spacing: 0.02em;
+}
+
+.nft-overlay-explorer-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.nft-overlay-dismiss {
+  background: transparent;
+  border: 1px solid rgba(60, 80, 120, 0.7);
+  color: #6a85ab;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.nft-overlay-dismiss:hover {
+  border-color: rgba(57, 208, 216, 0.5);
+  color: #9ec5e0;
+}
+
+.deposit-token-locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(11, 18, 33, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 18px;
+  z-index: 10;
+  text-align: center;
+  padding: 16px;
+}
+
+.deposit-token-locked-icon {
+  font-size: 24px;
+}
+
+.deposit-token-locked-title {
+  color: #e6f0ff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.deposit-token-locked-desc {
+  color: #7a8fa6;
+  font-size: 13px;
+  max-width: 80%;
+}
+
+.is-locked-blur {
+  filter: blur(4px);
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}

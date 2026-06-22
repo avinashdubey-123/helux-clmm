@@ -1,0 +1,290 @@
+import React, { useState, useMemo } from 'react'
+import { useConnection, useWallet } from '@solana/wallet-adapter-react'
+import { PublicKey, Transaction } from '@solana/web3.js'
+import { BN } from '@coral-xyz/anchor'
+import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { PoolRowData } from '../../contexts/PoolsContext'
+import { PositionRowData, getTokensFromLiquidity } from '../../hooks/usePositions'
+import useProgram from '../../utils/useProgram'
+import { useTransactions } from '../../contexts/TxContext'
+import { getTickArrayAddress } from '../../utils/pda'
+
+function formatAmount(amount: number) {
+  return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+}
+
+const clampTick = (tick: number, spacing: number, direction: 'down' | 'up') => {
+  const safeSpacing = Math.max(1, spacing)
+  const snapped = direction === 'down'
+    ? Math.floor(tick / safeSpacing) * safeSpacing
+    : Math.ceil(tick / safeSpacing) * safeSpacing
+  return Math.max(-443636, Math.min(443636, snapped))
+}
+
+const tickArrayStartIndex = (tick: number, spacing: number) => {
+  const tickCount = 60 * Math.max(1, spacing)
+  return Math.floor(tick / tickCount) * tickCount
+}
+
+interface Props {
+  pool: PoolRowData
+  position: PositionRowData
+  onClose: () => void
+  onSuccess: () => void
+}
+
+export default function DecreaseLiquidityModal({ pool, position, onClose, onSuccess }: Props) {
+  const { connection } = useConnection()
+  const { publicKey, signTransaction } = useWallet()
+  const program = useProgram()
+  const { addTransaction } = useTransactions()
+
+  const [percentage, setPercentage] = useState<number>(0)
+  const [amount0Input, setAmount0Input] = useState<string>('')
+  const [amount1Input, setAmount1Input] = useState<string>('')
+  const [_activeField, setActiveField] = useState<'slider' | 'amount0' | 'amount1'>('slider')
+  const [busy, setBusy] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase()
+  const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase()
+
+  const { amount0: maxAmount0, amount1: maxAmount1 } = useMemo(() => getTokensFromLiquidity(
+    position.liquidity,
+    position.tickLower,
+    position.tickUpper,
+    pool.tickCurrent,
+    pool.mintDecimals0,
+    pool.mintDecimals1
+  ), [position, pool])
+
+  const removeAmount0 = (maxAmount0 * percentage) / 100
+  const removeAmount1 = (maxAmount1 * percentage) / 100
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setActiveField('slider')
+    const newPct = Number(e.target.value)
+    setPercentage(newPct)
+    setAmount0Input(((maxAmount0 * newPct) / 100).toFixed(pool.mintDecimals0).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+    setAmount1Input(((maxAmount1 * newPct) / 100).toFixed(pool.mintDecimals1).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+  }
+
+  const handleAmount0Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setActiveField('amount0')
+    const val = e.target.value
+    setAmount0Input(val)
+    const numVal = Number(val) || 0
+    let pct = 0
+    if (maxAmount0 > 0) {
+      pct = Math.min(100, Math.max(0, (numVal / maxAmount0) * 100))
+    } else if (maxAmount1 > 0) {
+      pct = 0 // can't derive from amount0 if maxAmount0 is 0
+    }
+    setPercentage(pct)
+    setAmount1Input(((maxAmount1 * pct) / 100).toFixed(pool.mintDecimals1).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+  }
+
+  const handleAmount1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setActiveField('amount1')
+    const val = e.target.value
+    setAmount1Input(val)
+    const numVal = Number(val) || 0
+    let pct = 0
+    if (maxAmount1 > 0) {
+      pct = Math.min(100, Math.max(0, (numVal / maxAmount1) * 100))
+    } else if (maxAmount0 > 0) {
+      pct = 0
+    }
+    setPercentage(pct)
+    setAmount0Input(((maxAmount0 * pct) / 100).toFixed(pool.mintDecimals0).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+  }
+
+  const setMaxPercentage = (pct: number) => {
+    setActiveField('slider')
+    setPercentage(pct)
+    setAmount0Input(((maxAmount0 * pct) / 100).toFixed(pool.mintDecimals0).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+    setAmount1Input(((maxAmount1 * pct) / 100).toFixed(pool.mintDecimals1).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+  }
+
+  const handleWithdraw = async () => {
+    if (!program || !publicKey || !signTransaction || percentage <= 0) return
+    setErrorMsg('')
+    setBusy(true)
+
+    try {
+      const liquidityToRemove = new BN(position.liquidity).mul(new BN(percentage)).div(new BN(100))
+      
+      const slippageTolerance = 0.99 // 1%
+      const amount0Min = new BN(Math.max(0, Math.floor(removeAmount0 * 10 ** pool.mintDecimals0 * slippageTolerance)))
+      const amount1Min = new BN(Math.max(0, Math.floor(removeAmount1 * 10 ** pool.mintDecimals1 * slippageTolerance)))
+
+      const poolPda = new PublicKey(pool.poolPda)
+      const tickSpacing = pool.tickSpacing
+      const adjustedLower = clampTick(position.tickLower, tickSpacing, 'down')
+      const adjustedUpper = clampTick(position.tickUpper, tickSpacing, 'up')
+      
+      const tickArrayLowerStartIndex = tickArrayStartIndex(adjustedLower, tickSpacing)
+      const tickArrayUpperStartIndex = tickArrayStartIndex(adjustedUpper, tickSpacing)
+
+      const positionNftMint = new PublicKey(position.nftMint)
+      const positionNftAccount = getAssociatedTokenAddressSync(positionNftMint, publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+      const tokenMint0 = new PublicKey(pool.tokenMint0)
+      const tokenMint1 = new PublicKey(pool.tokenMint1)
+      const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0, publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+      const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1, publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+      
+      const tickArrayLower = getTickArrayAddress(poolPda, tickArrayLowerStartIndex, program.programId)[0]
+      const tickArrayUpper = getTickArrayAddress(poolPda, tickArrayUpperStartIndex, program.programId)[0]
+
+      // @ts-ignore
+      const instruction = await program.methods.decreaseLiquidityV2(
+        liquidityToRemove,
+        amount0Min,
+        amount1Min
+      ).accounts({
+        nftOwner: publicKey,
+        nftAccount: positionNftAccount,
+        personalPosition: new PublicKey(position.positionPda),
+        poolState: poolPda,
+        protocolPosition: PublicKey.default,
+        tokenVault0: new PublicKey(pool.tokenVault0),
+        tokenVault1: new PublicKey(pool.tokenVault1),
+        tickArrayLower,
+        tickArrayUpper,
+        recipientTokenAccount0: tokenAccount0,
+        recipientTokenAccount1: tokenAccount1,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram2022: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
+        memoProgram: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+        vault0Mint: tokenMint0,
+        vault1Mint: tokenMint1
+      }).instruction()
+
+      const tx = new Transaction().add(instruction)
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
+      tx.feePayer = publicKey
+      tx.recentBlockhash = blockhash
+
+      const signedTx = await signTransaction(tx)
+      const rawTransaction = signedTx.serialize()
+      const signature = await connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      })
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
+      
+      addTransaction(signature, `Decreased liquidity in ${t0Name}/${t1Name} by ${percentage}%`)
+      onSuccess()
+      onClose()
+    } catch (err: any) {
+      console.error(err)
+      setErrorMsg(err.message || 'Failed to decrease liquidity')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="portfolio-modal-overlay">
+      <div className="portfolio-modal-backdrop" onClick={onClose} />
+      <div className="portfolio-modal-content withdraw-overlay">
+        <button className="portfolio-modal-close" onClick={onClose}>✕</button>
+        <div className="portfolio-modal-header">
+          <h2>Withdraw Liquidity from {t0Name} - {t1Name}</h2>
+          <p className="modal-withdraw-subtitle">Select the amount of liquidity you wish to withdraw.</p>
+        </div>
+
+        <div className="portfolio-modal-body">
+          <div className="withdraw-slider-container">
+            <div className="withdraw-slider-header">
+              <span>Amount</span>
+              <span className="modal-withdraw-pct">{Math.round(percentage)}%</span>
+            </div>
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              step="0.1"
+              value={percentage} 
+              onChange={handleSliderChange}
+              className="withdraw-slider"
+              style={{ background: `linear-gradient(to right, #39d0d8 ${percentage}%, #1a2640 ${percentage}%)` }}
+            />
+            <div className="withdraw-slider-marks">
+              <span onClick={() => setMaxPercentage(25)}>25%</span>
+              <span onClick={() => setMaxPercentage(50)}>50%</span>
+              <span onClick={() => setMaxPercentage(75)}>75%</span>
+              <span onClick={() => setMaxPercentage(100)}>100%</span>
+            </div>
+          </div>
+
+          <div className="deposit-token-card modal-deposit-total">
+            <div className="deposit-token-top modal-token-top-between">
+              <strong>{t0Name}</strong>
+              <div className="deposit-balance-box">
+                <img src="/src/assets/wallet.svg" alt="invested" className="wallet-icon" />
+                <span>{formatAmount(maxAmount0)}</span>
+                <button className="deposit-quick-btn" onClick={() => setMaxPercentage(100)}>MAX</button>
+              </div>
+            </div>
+            <div className="deposit-token-row">
+              <input
+                value={amount0Input}
+                onChange={handleAmount0Change}
+                inputMode="decimal"
+                disabled={maxAmount0 === 0}
+                className={maxAmount0 === 0 ? 'deposit-input-disabled' : ''}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="deposit-plus modal-deposit-plus">+</div>
+
+          <div className="deposit-token-card">
+            <div className="deposit-token-top modal-token-top-between">
+              <strong>{t1Name}</strong>
+              <div className="deposit-balance-box">
+                <img src="/src/assets/wallet.svg" alt="invested" className="wallet-icon" />
+                <span>{formatAmount(maxAmount1)}</span>
+                <button className="deposit-quick-btn" onClick={() => setMaxPercentage(100)}>MAX</button>
+              </div>
+            </div>
+            <div className="deposit-token-row">
+              <input
+                value={amount1Input}
+                onChange={handleAmount1Change}
+                inputMode="decimal"
+                disabled={maxAmount1 === 0}
+                className={maxAmount1 === 0 ? 'deposit-input-disabled' : ''}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="modal-withdraw-amounts-card">
+            <h3 className="modal-withdraw-amounts-title">You will receive</h3>
+            <div className="modal-withdraw-amounts-row">
+              <span>{formatAmount(removeAmount0)}</span>
+              <strong>{t0Name}</strong>
+            </div>
+            <div className="modal-withdraw-amounts-row last">
+              <span>{formatAmount(removeAmount1)}</span>
+              <strong>{t1Name}</strong>
+            </div>
+          </div>
+
+          {errorMsg && <div className="portfolio-error-msg">{errorMsg}</div>}
+
+          <button 
+            className="portfolio-btn modal-submit-btn" 
+            disabled={busy || percentage <= 0} 
+            onClick={handleWithdraw}
+          >
+            {busy ? <span className="loader-dots">Processing...</span> : 'Withdraw Liquidity'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

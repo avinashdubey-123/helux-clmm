@@ -1,0 +1,78 @@
+.tx-card-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #131c2e;
+  border: 1px solid #39d0d8;
+  border-radius: 12px;
+  padding: 16px 20px 20px; /* Extra bottom padding for timer bar */
+  box-shadow: 0 4px 20px rgba(57, 208, 216, 0.2);
+  z-index: 9999;
+  width: 320px;
+  animation: slideIn 0.3s ease-out forwards;
+  overflow: hidden;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.tx-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tx-card-header h4 {
+  margin: 0;
+  color: #e6f0ff;
+  font-size: 16px;
+  text-align: center;
+}
+
+.tx-card-close {
+  background: none;
+  border: none;
+  color: #7a8fa6;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+.tx-card-close:hover {
+  color: #e6f0ff;
+}
+
+.tx-card-desc {
+  margin: 0 0 12px;
+  color: #7a8fa6;
+  font-size: 14px;
+}
+
+.tx-card-link {
+  color: #9945ff;
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.tx-card-link:hover {
+  text-decoration: underline;
+}
+
+.tx-card-timer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: #39d0d8;
+  width: 100%;
+  animation: shrink 10s linear forwards;
+}
+
+@keyframes shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
