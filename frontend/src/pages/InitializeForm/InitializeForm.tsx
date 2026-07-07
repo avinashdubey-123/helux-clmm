@@ -7,6 +7,11 @@ import { BN } from '@coral-xyz/anchor'
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { getObservationAddress, getPoolAddress, getPoolTickArrayBitmapAddress, getPoolVaultAddress, getPositionAddress, getTickArrayAddress } from '../../utils/pda'
+import { usePools } from '../../contexts/PoolsContext'
+import { useTransactions } from '../../contexts/TxContext'
+import { getShortTokenName } from '../../utils/token'
+import { triggerPoolsRefetch } from '../../utils/cache'
+import { usePositions } from '../../hooks/usePositions'
 import './InitializeForm.css'
 
 type Step = 1 | 2 | 3
@@ -42,9 +47,18 @@ const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt
 
 const clampTickToSpacing = (tick: number, tickSpacing: number, direction: 'down' | 'up') => {
   const spacing = Math.max(1, tickSpacing)
-  const snapped = direction === 'down'
+  let snapped = direction === 'down'
     ? Math.floor(tick / spacing) * spacing
     : Math.ceil(tick / spacing) * spacing
+  
+  const MIN_TICK = -443636
+  const MAX_TICK = 443636
+  if (snapped < MIN_TICK) {
+    snapped = Math.ceil(MIN_TICK / spacing) * spacing
+  }
+  if (snapped > MAX_TICK) {
+    snapped = Math.floor(MAX_TICK / spacing) * spacing
+  }
   return snapped
 }
 
@@ -57,6 +71,9 @@ export default function InitializeForm() {
   const program = useProgram()
   const { connection } = useConnection()
   const wallet = useWallet()
+  const { addTransaction } = useTransactions()
+  const { refreshPools } = usePools()
+  const { refreshPositions } = usePositions()
   const [step, setStep] = useState<Step>(1)
   const [completedSteps, setCompletedSteps] = useState<Step[]>([])
   const [txStatus, setTxStatus] = useState<{
@@ -64,6 +81,8 @@ export default function InitializeForm() {
     title: string
     message: string
     details?: string
+    signature?: string
+    explorerUrl?: string
   } | null>(null)
   const [selectedFeeTier, setSelectedFeeTier] = useState('')
   const [mint0Address, setMint0Address] = useState('')
@@ -192,24 +211,18 @@ export default function InitializeForm() {
 
   const depositMode = useMemo(() => {
     if (rangeMode === 'full') return 'both'
-    const currentTick = displayPriceToTick(priceValue)
-    let tickLower = clampTickToSpacing(Math.floor(displayPriceToTick(Number(rangeMin) || 1)), tickSpacing, 'down')
-    let tickUpper = clampTickToSpacing(Math.ceil(displayPriceToTick(Number(rangeMax) || 1)), tickSpacing, 'up')
-
-    if (tickLower >= tickUpper) {
-      const bumpedUpper = tickLower + tickSpacing
-      const loweredLower = tickUpper - tickSpacing
-      if (bumpedUpper <= MAX_TICK) {
-        tickUpper = bumpedUpper
-      } else if (loweredLower >= MIN_TICK) {
-        tickLower = loweredLower
-      }
+    const min = Number(rangeMin) || 0
+    const max = Number(rangeMax) || Infinity
+    
+    // Determine which UI token is needed based on whether current price is below or above range
+    if (priceValue < min) {
+      return priceUnit === 'token1' ? 'token0Only' : 'token1Only'
     }
-
-    if (currentTick < tickLower) return 'token0Only'
-    if (currentTick >= tickUpper) return 'token1Only'
+    if (priceValue >= max) {
+      return priceUnit === 'token1' ? 'token1Only' : 'token0Only'
+    }
     return 'both'
-  }, [rangeMode, priceValue, rangeMin, rangeMax, tickSpacing, priceUnit])
+  }, [rangeMode, priceValue, rangeMin, rangeMax, priceUnit])
 
   useEffect(() => {
     if (rangeMode !== 'custom') return
@@ -372,48 +385,12 @@ export default function InitializeForm() {
     const [observationState] = getObservationAddress(poolState, program.programId)
     const [tickArrayBitmap] = getPoolTickArrayBitmapAddress(poolState, program.programId)
 
-    let tickLower = rangeMode === 'full'
-      ? clampTickToSpacing(-443636, tickSpacing, 'down')
-      : clampTickToSpacing(Math.floor(displayPriceToTick(Number(rangeMin) || 1)), tickSpacing, 'down')
-    let tickUpper = rangeMode === 'full'
-      ? clampTickToSpacing(443636, tickSpacing, 'up')
-      : clampTickToSpacing(Math.ceil(displayPriceToTick(Number(rangeMax) || 1)), tickSpacing, 'up')
-
-    // ensure strict ordering required by program constraints
-    if (tickLower >= tickUpper) {
-      const bumpedUpper = tickLower + tickSpacing
-      const loweredLower = tickUpper - tickSpacing
-
-      if (bumpedUpper <= MAX_TICK) {
-        tickUpper = bumpedUpper
-      } else if (loweredLower >= MIN_TICK) {
-        tickLower = loweredLower
-      }
-    }
-
-    if (tickLower >= tickUpper) {
-      setTxStatus({
-        status: 'error',
-        title: 'Invalid range',
-        message: 'Lower tick must be smaller than upper tick. Widen the price range and try again.',
-      })
-      return
-    }
-
-    const tickArrayLowerStartIndex = getTickArrayStartIndex(tickLower, tickSpacing)
-    const tickArrayUpperStartIndex = getTickArrayStartIndex(tickUpper, tickSpacing)
-
-    const liquidity = new BN(0)
-    const amount0Max = new BN(Math.max(0, Math.floor(Number(depositForCanonical0 || 0) * 10 ** 6)))
-    const amount1Max = new BN(Math.max(0, Math.floor(Number(depositForCanonical1 || 0) * 10 ** 6)))
     const positionNftMint = Keypair.generate()
     const positionNftAccount = getAssociatedTokenAddressSync(positionNftMint.publicKey, walletPublicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
     const metadataAccount = PublicKey.findProgramAddressSync(
       [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), positionNftMint.publicKey.toBuffer()],
       METADATA_PROGRAM_ID,
     )[0]
-    const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0, walletPublicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
-    const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1, walletPublicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
 
     setTxStatus({
       status: 'info',
@@ -434,11 +411,14 @@ export default function InitializeForm() {
     const nextTimerId = window.setTimeout(async () => {
       try {
         // compute sqrt_price_x64 (Q64.64) from the displayed initial price and mint decimals
-        // get decimals for canonical mints
         let decimals0 = 6
         let decimals1 = 6
+        let tokenProgram0Id = TOKEN_PROGRAM_ID
+        let tokenProgram1Id = TOKEN_PROGRAM_ID
+        
         try {
           const resp0 = await connection.getParsedAccountInfo(canonicalMint0)
+          if (resp0?.value?.owner) tokenProgram0Id = resp0.value.owner
           const parsed0 = (resp0?.value?.data as any)?.parsed
           if (parsed0?.info?.decimals != null) decimals0 = Number(parsed0.info.decimals)
         } catch (e) {
@@ -446,6 +426,7 @@ export default function InitializeForm() {
         }
         try {
           const resp1 = await connection.getParsedAccountInfo(canonicalMint1)
+          if (resp1?.value?.owner) tokenProgram1Id = resp1.value.owner
           const parsed1 = (resp1?.value?.data as any)?.parsed
           if (parsed1?.info?.decimals != null) decimals1 = Number(parsed1.info.decimals)
         } catch (e) {
@@ -472,6 +453,9 @@ export default function InitializeForm() {
           throw new Error('Initial price resolves to a sqrt_price_x64 outside the supported range')
         }
         const sqrtPriceX64 = new BN(sqrtPriceX64Big.toString())
+        
+        const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0, walletPublicKey, false, tokenProgram0Id, ASSOCIATED_TOKEN_PROGRAM_ID)
+        const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1, walletPublicKey, false, tokenProgram1Id, ASSOCIATED_TOKEN_PROGRAM_ID)
 
         const createIx = await (program.methods as any)
           .createPool(sqrtPriceX64, new BN(0))
@@ -485,15 +469,73 @@ export default function InitializeForm() {
             tokenVault1,
             observationState,
             tickArrayBitmap,
-            tokenProgram0: TOKEN_PROGRAM_ID,
-            tokenProgram1: TOKEN_PROGRAM_ID,
+            tokenProgram0: tokenProgram0Id,
+            tokenProgram1: tokenProgram1Id,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
           })
           .instruction()
 
+        // Helper to convert a user UI price to a canonical tick
+        const userPriceToCanonicalTick = (uiPrice: number) => {
+          let priceIsCanonicalToken0PerToken1 = priceUnit === 'token1'
+          if (swapped) priceIsCanonicalToken0PerToken1 = !priceIsCanonicalToken0PerToken1
+          const priceForConversion = priceIsCanonicalToken0PerToken1 ? uiPrice : 1 / uiPrice
+          const pWithDecimals = priceForConversion * Math.pow(10, decimals1) / Math.pow(10, decimals0)
+          return Math.log(pWithDecimals) / Math.log(1.0001)
+        }
+
+        let tickLower: number
+        let tickUpper: number
+
+        if (rangeMode === 'full') {
+          tickLower = clampTickToSpacing(-443636, tickSpacing, 'down')
+          tickUpper = clampTickToSpacing(443636, tickSpacing, 'up')
+        } else {
+          const rawTick1 = userPriceToCanonicalTick(Number(rangeMin) || 1)
+          const rawTick2 = userPriceToCanonicalTick(Number(rangeMax) || 1)
+          
+          const minRaw = Math.min(rawTick1, rawTick2)
+          const maxRaw = Math.max(rawTick1, rawTick2)
+
+          tickLower = clampTickToSpacing(Math.floor(minRaw), tickSpacing, 'down')
+          tickUpper = clampTickToSpacing(Math.ceil(maxRaw), tickSpacing, 'up')
+
+          if (tickLower >= tickUpper) {
+            tickUpper = tickLower + tickSpacing
+          }
+        }
+
+        const tickArrayLowerStartIndex = getTickArrayStartIndex(tickLower, tickSpacing)
+        const tickArrayUpperStartIndex = getTickArrayStartIndex(tickUpper, tickSpacing)
+
+        const a0 = Number(depositForCanonical0 || 0) * Math.pow(10, decimals0)
+        const a1 = Number(depositForCanonical1 || 0) * Math.pow(10, decimals1)
+
+        const slippageTolerance = 1.005; // 0.5% buffer for max amounts
+        const amount0Max = new BN(Math.max(0, Math.floor(a0 * slippageTolerance)))
+        const amount1Max = new BN(Math.max(0, Math.floor(a1 * slippageTolerance)))
+
+        // Calculate liquidity based on UI amounts
+        const currentTick = Math.log(priceWithDecimals) / Math.log(1.0001)
+        const sqrtP = Math.pow(1.0001, currentTick / 2)
+        const sqrtPL = Math.pow(1.0001, tickLower / 2)
+        const sqrtPU = Math.pow(1.0001, tickUpper / 2)
+        
+        let L: number
+        if (currentTick < tickLower) {
+          L = a0 * (sqrtPL * sqrtPU) / (sqrtPU - sqrtPL)
+        } else if (currentTick >= tickUpper) {
+          L = a1 / (sqrtPU - sqrtPL)
+        } else {
+          const L0 = a0 * (sqrtP * sqrtPU) / (sqrtPU - sqrtP)
+          const L1 = a1 / (sqrtP - sqrtPL)
+          L = Math.min(L0, L1)
+        }
+        const liquidity = new BN(Math.max(0, Math.floor(L)))
+
         const openPositionIx = await (program.methods as any)
-          .openPosition(
+          .openPositionV2(
             tickLower,
             tickUpper,
             tickArrayLowerStartIndex,
@@ -501,6 +543,8 @@ export default function InitializeForm() {
             liquidity,
             amount0Max,
             amount1Max,
+            false, // with_metadata
+            null,  // base_flag
           )
           .accounts({
             payer: walletPublicKey,
@@ -522,6 +566,9 @@ export default function InitializeForm() {
             tokenProgram: TOKEN_PROGRAM_ID,
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
             metadataProgram: METADATA_PROGRAM_ID,
+            tokenProgram2022: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
+            vault0Mint: tokenMint0,
+            vault1Mint: tokenMint1,
           })
           .signers([positionNftMint])
           .instruction()
@@ -543,15 +590,20 @@ export default function InitializeForm() {
           preflightCommitment: 'confirmed'
         })
         await connection.confirmTransaction({ signature: atomicSig, blockhash, lastValidBlockHeight }, 'confirmed')
+        addTransaction(atomicSig, `Created pool ${getShortTokenName(mint0.toBase58())}-${getShortTokenName(mint1.toBase58())}`, 'Create Pool', true)
 
+        refreshPools()
+        if (wallet.publicKey) {
+          triggerPoolsRefetch(wallet.publicKey.toBase58())
+        }
+        refreshPositions()
         setTxStatus({
           status: 'success',
           title: 'Pool created',
           message: 'Create pool and open position completed atomically in one transaction.',
-          details: [
-            `Signature: ${atomicSig}`,
-            `Pool: ${poolState.toBase58()}`,
-          ].join('\n'),
+          signature: atomicSig,
+          explorerUrl: `https://explorer.solana.com/tx/${atomicSig}?cluster=devnet`,
+          details: `Pool: ${poolState.toBase58()}`,
         })
       } catch (error: any) {
         setTxStatus({
@@ -735,9 +787,6 @@ export default function InitializeForm() {
                     </div>
                   </div>
                 )}
-                <div className="clmm-range-summary">
-                  <span>Price step: {tickSpacing > 0 ? `x${Math.pow(1.0001, tickSpacing).toFixed(6)}` : '-'}</span>
-                </div>
               </div>
 
               <div className="clmm-footer">
@@ -759,6 +808,8 @@ export default function InitializeForm() {
                   title={txStatus.title}
                   message={txStatus.message}
                   details={txStatus.details}
+                  signature={txStatus.signature}
+                  explorerUrl={txStatus.explorerUrl}
                   onClose={() => setTxStatus(null)}
                 />
               )}

@@ -81,7 +81,7 @@
 }
 
 .clmm-form-title {
-  color: #f4f8ff;
+  color: #abc4ff;
   font-size: clamp(20px, 2.4vw, 30px);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -94,7 +94,7 @@
   margin-top: 10px;
   padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(57, 208, 216, 0.18);
+  border: 1px solid rgba(35, 50, 82, 0.95);
   color: #cfe4ff;
   text-decoration: none;
   background: rgba(8, 17, 31, 0.68);
@@ -148,13 +148,18 @@
 .clmm-step:hover:not(:disabled) { background: rgba(45, 61, 92, 0.4); }
 .clmm-step:disabled { opacity: 0.6; cursor: not-allowed; }
 .clmm-step.active {
-  background: rgba(57, 208, 216, 0.12);
-  border: 1px solid rgba(57, 208, 216, 0.24);
+  background: rgba(171, 196, 255, 0.12);
+  border: 1px solid rgba(171, 196, 255, 0.24);
+}
+.clmm-step.active .clmm-step-index {
+  background: #abc4ff;
+  color: #0b1221;
+  border-color: #abc4ff;
 }
 .clmm-step.completed .clmm-step-index {
-  background: rgba(0, 255, 189, 0.14);
-  color: #7dffd9;
-  border-color: rgba(0, 255, 189, 0.24);
+  background: rgba(171, 196, 255, 0.14);
+  color: #abc4ff;
+  border-color: rgba(171, 196, 255, 0.24);
 }
 
 .clmm-step-index {
@@ -198,7 +203,7 @@
   text-transform: uppercase;
 }
 
-.clmm-panel h2 { margin: 0; color: #f4f8ff; font-size: 24px; }
+.clmm-panel h2 { margin: 0; color: #abc4ff; font-size: 24px; }
 
 .clmm-status-pill,
 .clmm-helper-chip {
@@ -401,7 +406,7 @@
   color: #081120;
 }
 
-.clmm-primary-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.clmm-primary-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #2a3b4c; color: #7a8fa6; }
 
 .clmm-secondary-btn {
   background: rgba(17, 27, 49, 0.96);
@@ -688,7 +693,8 @@
 
 .liquidity-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
 .liquidity-panel-tag { display: inline-flex; margin-bottom: 8px; color: #70f5ff; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.liquidity-panel h2 { margin: 0; color: #f4f8ff; font-size: 24px; }
+.liquidity-panel h2 { margin: 0; color: #abc4ff; font-size: 24px; }
+.liquidity-panel p { margin: 6px 0 0; color: #8a9fc4; font-size: 14px; line-height: 1.5; }
 
 .liquidity-primary-btn {
   min-width: 170px;

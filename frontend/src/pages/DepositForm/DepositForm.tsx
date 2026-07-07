@@ -10,20 +10,30 @@ import {
 } from 'recharts'
 import { getPositionAddress, getTickArrayAddress } from '../../utils/pda'
 import { useTransactions } from '../../contexts/TxContext'
+import { callWithRetry } from '../../utils/batchFetch'
 import useProgram from '../../utils/useProgram'
 import TransactionCard from '../../components/TransactionCard/TransactionCard'
 import copyIcon from '../../assets/copy.svg'
 import { usePools } from '../../contexts/PoolsContext'
+import { usePositions } from '../../hooks/usePositions'
+import { triggerPoolsRefetch } from '../../utils/cache'
 import './DepositForm.css'
 const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 const MIN_TICK = -443636
 const MAX_TICK = 443636
 const clampTick = (tick: number, spacing: number, direction: 'down' | 'up') => {
   const safeSpacing = Math.max(1, spacing)
-  const snapped = direction === 'down'
+  let snapped = direction === 'down'
     ? Math.floor(tick / safeSpacing) * safeSpacing
     : Math.ceil(tick / safeSpacing) * safeSpacing
-  return Math.max(MIN_TICK, Math.min(MAX_TICK, snapped))
+  
+  if (snapped < MIN_TICK) {
+    snapped = Math.ceil(MIN_TICK / safeSpacing) * safeSpacing
+  }
+  if (snapped > MAX_TICK) {
+    snapped = Math.floor(MAX_TICK / safeSpacing) * safeSpacing
+  }
+  return snapped
 }
 const snapTickToSpacing = (tick: number, spacing: number) => {
   const safeSpacing = Math.max(1, spacing)
@@ -52,6 +62,10 @@ const toNumber = (value: any, fallback = 0) => {
 const formatAmount = (value: number) => {
   if (!Number.isFinite(value)) return '0'
   if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  return value.toFixed(6).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1')
+}
+const formatInputAmount = (value: number) => {
+  if (!Number.isFinite(value)) return '0'
   return value.toFixed(6).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1')
 }
 const sqrtPriceX64ToTick = (sqrtPriceX64: number) => {
@@ -137,7 +151,7 @@ const fetchOnChainLiquidity = async (
   // Derive PDA addresses for each tick array
   const pdas = startIndices.map(idx => getTickArrayAddress(poolPda, idx, program.programId)[0])
   try {
-    const accounts = await connection.getMultipleAccountsInfo(pdas)
+    const accounts = await callWithRetry(() => connection.getMultipleAccountsInfo(pdas))
     const tickEntries: { tick: number; liquidityNet: number }[] = []
     let existingCount = 0
     for (let arrIdx = 0; arrIdx < accounts.length; arrIdx++) {
@@ -163,14 +177,15 @@ const fetchOnChainLiquidity = async (
     }
     console.log(`[CLMM] Fetched ${pdas.length} tick array PDAs, ${existingCount} exist on-chain, ${tickEntries.length} initialized ticks found`)
     if (tickEntries.length === 0) {
-      // If no ticks are found, provide a flat zero-liquidity line spanning a reasonable
-      // range around the current price so the chart renders properly and handles are visible.
+      // If no ticks are found in the local range, the active liquidity is constant (e.g. a full range position)
       const halfSpan = tickSpacing * 14
-      const data: { tick: number; price: number; liquidity: number }[] = []
+      const depth = poolLiquidity / Math.pow(10, (decimals0 + decimals1) / 2)
+      const data: { tick: number; price: number; liquidity: number; normalizedLiquidity?: number }[] = []
       for (const t of [priceTick - halfSpan, priceTick, priceTick + halfSpan]) {
         const raw = Math.pow(1.0001, t) * Math.pow(10, decimals0 - decimals1)
         const price = priceOrientation === 'token1PerToken0' ? raw : (raw > 0 ? 1 / raw : 0)
-        data.push({ tick: t, price: parseFloat(price.toFixed(8)), liquidity: 0 })
+        const liq = depth > 0 ? depth : 0
+        data.push({ tick: t, price: parseFloat(price.toFixed(8)), liquidity: liq, normalizedLiquidity: liq > 0 ? 100 : 0 })
       }
       return data
     }
@@ -301,7 +316,8 @@ const LiquidityTooltip = ({ active, payload }: any) => {
 }
 export default function DepositForm() {
   const location = useLocation()
-  const { refreshPools } = usePools()
+  const { refreshPools, loadingPools } = usePools()
+  const { refreshPositions } = usePositions()
   const program = useProgram()
   const { connection } = useConnection()
   const wallet = useWallet()
@@ -323,14 +339,14 @@ export default function DepositForm() {
   const [feeTierLabel, setFeeTierLabel] = useState('')
   const [minPriceInput, setMinPriceInput] = useState('')
   const [maxPriceInput, setMaxPriceInput] = useState('')
-  const [slippageTolerance, setSlippageTolerance] = useState<1.01 | 1.025 | 1.035>(1.01)
-  const [showSlippageOverlay, setShowSlippageOverlay] = useState(false)
+  const slippageTolerance = 1.005; // 0.5% hardcoded
   const [busy, setBusy] = useState(false)
   const [txState, setTxState] = useState<{
     status: 'success' | 'error' | 'info'
     title: string
     message: string
     signature?: string
+    explorerUrl?: string
     details?: string | null
   } | null>(null)
   const [poolHoverVisible, setPoolHoverVisible] = useState(false)
@@ -370,14 +386,14 @@ export default function DepositForm() {
       if (!program || !poolPda) return
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const freshPool = await (program.account as any).poolState.fetch(poolPda)
+        const freshPool = await callWithRetry(() => (program.account as any).poolState.fetch(poolPda)) as any
         if (!cancelled) {
           setPool({ ...freshPool, poolPda: poolPda.toBase58() })
         }
         const ammConfigPda = freshPool.ammConfig ?? freshPool.amm_config
         if (ammConfigPda) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const config = await (program.account as any).ammConfig.fetch(ammConfigPda)
+          const config = await callWithRetry(() => (program.account as any).ammConfig.fetch(ammConfigPda)) as any
           const tradeFeeRate = Number(config.tradeFeeRate?.toString?.() ?? config.trade_fee_rate?.toString?.() ?? 0)
           const val = tradeFeeRate > 100 ? tradeFeeRate / 10000 : tradeFeeRate
           if (!cancelled) setFeeTierLabel(`${val}%`)
@@ -410,18 +426,39 @@ export default function DepositForm() {
   const [balance1, setBalance1] = useState<number>(0)
 
   useEffect(() => {
-    if (!wallet.publicKey || !tokenMint0 || !tokenMint1) return
+    if (!wallet.publicKey || !tokenMint0 || !tokenMint1) {
+      setBalance0(0)
+      setBalance1(0)
+      return
+    }
     let active = true
 
     const getBalances = async () => {
       try {
-        const bal0 = await connection.getParsedTokenAccountsByOwner(wallet.publicKey!, { mint: tokenMint0! })
-        const bal1 = await connection.getParsedTokenAccountsByOwner(wallet.publicKey!, { mint: tokenMint1! })
-        
+        let programId0 = TOKEN_PROGRAM_ID
+        let programId1 = TOKEN_PROGRAM_ID
+        try {
+          const resp0 = await callWithRetry(() => connection.getParsedAccountInfo(tokenMint0!))
+          if (resp0?.value?.owner) programId0 = resp0.value.owner
+        } catch (e) {}
+        try {
+          const resp1 = await callWithRetry(() => connection.getParsedAccountInfo(tokenMint1!))
+          if (resp1?.value?.owner) programId1 = resp1.value.owner
+        } catch (e) {}
+
+        const ata0 = getAssociatedTokenAddressSync(tokenMint0!, wallet.publicKey!, false, programId0, ASSOCIATED_TOKEN_PROGRAM_ID)
+        const ata1 = getAssociatedTokenAddressSync(tokenMint1!, wallet.publicKey!, false, programId1, ASSOCIATED_TOKEN_PROGRAM_ID)
+
         let b0 = 0
         let b1 = 0
-        if (bal0.value.length > 0) b0 = bal0.value[0].account.data.parsed.info.tokenAmount.uiAmount
-        if (bal1.value.length > 0) b1 = bal1.value[0].account.data.parsed.info.tokenAmount.uiAmount
+        try {
+          const bal0 = await callWithRetry(() => connection.getTokenAccountBalance(ata0))
+          b0 = bal0.value.uiAmount || 0
+        } catch (e) {}
+        try {
+          const bal1 = await callWithRetry(() => connection.getTokenAccountBalance(ata1))
+          b1 = bal1.value.uiAmount || 0
+        } catch (e) {}
         
         if (active) {
           setBalance0(b0)
@@ -433,10 +470,15 @@ export default function DepositForm() {
     return () => { active = false }
   }, [wallet.publicKey, connection, tokenMint0, tokenMint1, refreshTrigger])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [isCalculating, setIsCalculating] = useState(false);
+  const calcRequestIdRef = useRef<number>(0);
+  const calcTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevCalcStateRef = useRef({ amount0: '', amount1: '', lower: 0, upper: 0 });
+
+   
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const token0Color = useMemo(() => tokenMint0 ? addressToColor(tokenMint0.toBase58()) : 'hsl(200,70%,58%)', [tokenMint0])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const token1Color = useMemo(() => tokenMint1 ? addressToColor(tokenMint1.toBase58()) : 'hsl(270,70%,58%)', [tokenMint1])
   const poolTickEstimate = sqrtPriceX64 > 0 ? sqrtPriceX64ToTick(sqrtPriceX64) : currentTick
@@ -450,19 +492,22 @@ export default function DepositForm() {
     ? `${token1Name} / ${token0Name}`
     : `${token0Name} / ${token1Name}`
   const depositTotal = (Number(amount0) || 0) + (Number(amount1) || 0)
+  const exceedBalance0 = Number(amount0.replace(/,/g, '')) > balance0
+  const exceedBalance1 = Number(amount1.replace(/,/g, '')) > balance1
+  const exceedBalance = exceedBalance0 || exceedBalance1
   // ── Chart range helpers ──
   const selectedLowerTick = snapTickToSpacing(Number(tickLower) || priceTick, tickSpacing)
   const selectedUpperTick = snapTickToSpacing(Number(tickUpper) || priceTick, tickSpacing)
   const rangeIsInvalid = selectedLowerTick >= selectedUpperTick
   // BUG 3 FIX: Determine deposit mode based on current tick vs selected range
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+   
   const depositMode: 'token0Only' | 'token1Only' | 'both' = useMemo(() => {
     if (priceTick < selectedLowerTick) return 'token0Only'
     if (priceTick >= selectedUpperTick) return 'token1Only'
     return 'both'
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [priceTick, selectedLowerTick, selectedUpperTick])
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+   
   const depositRatio = useMemo(() => {
     const a0 = Number(amount0) || 0
     const a1 = Number(amount1) || 0
@@ -484,7 +529,7 @@ export default function DepositForm() {
       return `${pct0}% ${token0Name} / ${pct1}% ${token1Name}`
     }
     return `0% ${token0Name} / 0% ${token1Name}`
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [amount0, amount1, baseRatio, depositMode, token0Name, token1Name])
   const tickToPrice = (tick: number) => {
     const underlyingRatio = Math.pow(1.0001, tick) * Math.pow(10, decimals0 - decimals1)
@@ -539,57 +584,106 @@ export default function DepositForm() {
     const maxP = priceOrientation === 'token1PerToken0' ? tickToPrice(selectedUpperTick) : tickToPrice(selectedLowerTick)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMinPriceInput(formatAmount(minP))
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setMaxPriceInput(formatAmount(maxP))
   }, [selectedLowerTick, selectedUpperTick, priceOrientation, decimals0, decimals1])
-  // BUG 8 FIX: Amount coupling respects depositMode
+  // BUG 8 FIX: Amount coupling respects depositMode and uses debounced fresh fetch
   useEffect(() => {
     if (!Number.isFinite(baseRatio) || baseRatio <= 0) return
     // Single-sided: force the non-required amount to empty so it doesn't leave a sticky "0"
     if (depositMode === 'token0Only') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAmount1('')
       return
     }
     if (depositMode === 'token1Only') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAmount0('')
       return
     }
-    // Both mode: couple amounts via CLMM liquidity math
-    const sqrtP = Math.pow(1.0001, priceTick / 2)
-    const sqrtPL = Math.pow(1.0001, selectedLowerTick / 2)
-    const sqrtPU = Math.pow(1.0001, selectedUpperTick / 2)
-    if (activeField === 'amount0') {
-      if (amount0.trim() === '') {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setAmount1('')
-        return
+
+    const activeAmountChanged = activeField === 'amount0' 
+      ? amount0 !== prevCalcStateRef.current.amount0 
+      : amount1 !== prevCalcStateRef.current.amount1;
+
+    const boundsChanged = 
+      selectedLowerTick !== prevCalcStateRef.current.lower ||
+      selectedUpperTick !== prevCalcStateRef.current.upper;
+
+    if (!activeAmountChanged && !boundsChanged) {
+      return; // Do not recalculate just because focus changed
+    }
+
+    prevCalcStateRef.current = {
+      amount0,
+      amount1,
+      lower: selectedLowerTick,
+      upper: selectedUpperTick
+    };
+
+    if (calcTimeoutRef.current) {
+      clearTimeout(calcTimeoutRef.current);
+    }
+
+    calcTimeoutRef.current = setTimeout(async () => {
+      const currentRequestId = ++calcRequestIdRef.current;
+      setIsCalculating(true);
+      
+      try {
+        let freshPriceTick = priceTick;
+        if (program && poolPda) {
+          try {
+            const poolStateAcct = await callWithRetry(() => (program.account as any).poolState.fetch(poolPda)) as any;
+            freshPriceTick = poolStateAcct.tickCurrent || priceTick;
+          } catch (err) {
+            console.warn("Failed to fetch fresh pool state in deposit", err);
+          }
+        }
+
+        if (currentRequestId !== calcRequestIdRef.current) return;
+
+        // Both mode: couple amounts via CLMM liquidity math
+        const sqrtP = Math.pow(1.0001, freshPriceTick / 2)
+        const sqrtPL = Math.pow(1.0001, selectedLowerTick / 2)
+        const sqrtPU = Math.pow(1.0001, selectedUpperTick / 2)
+        
+        if (activeField === 'amount0') {
+          if (amount0.trim() === '') {
+            setAmount1('')
+          } else {
+            const a0_raw = Number(amount0.replace(/,/g, '')) * Math.pow(10, decimals0)
+            const L0 = a0_raw * (sqrtP * sqrtPU) / (sqrtPU - sqrtP)
+            const a1_raw = L0 * (sqrtP - sqrtPL)
+            const nextAmount1 = (a1_raw / Math.pow(10, decimals1))
+            if (Number.isFinite(nextAmount1)) {
+              const formatted = formatInputAmount(nextAmount1);
+              setAmount1(formatted);
+              prevCalcStateRef.current.amount1 = formatted; // Update ref so it doesn't trigger when focused later
+            }
+          }
+        } else if (activeField === 'amount1') {
+          if (amount1.trim() === '') {
+            setAmount0('')
+          } else {
+            const a1_raw = Number(amount1.replace(/,/g, '')) * Math.pow(10, decimals1)
+            const L1 = a1_raw / (sqrtP - sqrtPL)
+            const a0_raw = L1 * (sqrtPU - sqrtP) / (sqrtP * sqrtPU)
+            const nextAmount0 = (a0_raw / Math.pow(10, decimals0))
+            if (Number.isFinite(nextAmount0)) {
+              const formatted = formatInputAmount(nextAmount0);
+              setAmount0(formatted);
+              prevCalcStateRef.current.amount0 = formatted; // Update ref so it doesn't trigger when focused later
+            }
+          }
+        }
+      } finally {
+        if (currentRequestId === calcRequestIdRef.current) {
+          setIsCalculating(false);
+        }
       }
-      const a0_raw = Number(amount0) * Math.pow(10, decimals0)
-      const L0 = a0_raw * (sqrtP * sqrtPU) / (sqrtPU - sqrtP)
-      const a1_raw = L0 * (sqrtP - sqrtPL)
-      const nextAmount1 = (a1_raw / Math.pow(10, decimals1)) * slippageTolerance
-      if (Number.isFinite(nextAmount1)) {
-        setAmount1(formatAmount(nextAmount1))
-      }
-      return
-    }
-    if (amount1.trim() === '') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAmount0('')
-      return
-    }
-    const a1_raw = Number(amount1) * Math.pow(10, decimals1)
-    const L1 = a1_raw / (sqrtP - sqrtPL)
-    const a0_raw = L1 * (sqrtPU - sqrtP) / (sqrtP * sqrtPU)
-    const nextAmount0 = (a0_raw / Math.pow(10, decimals0)) * slippageTolerance
-    if (Number.isFinite(nextAmount0)) {
-      setAmount0(formatAmount(nextAmount0))
-    }
-  }, [activeField, amount0, amount1, priceTick, selectedLowerTick, selectedUpperTick, decimals0, decimals1, depositMode, slippageTolerance])
+    }, 500);
+
+  }, [activeField, amount0, amount1, priceTick, selectedLowerTick, selectedUpperTick, decimals0, decimals1, depositMode, slippageTolerance, program, poolPda])
   // BUG 1 FIX: Compute range in tick-space directly (orientation-agnostic)
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+   
   const applyDefaultRange = useCallback(() => {
     const currentPriceFloat = tickToPrice(priceTick)
     // BUG FIX: Pointers set by default at +5% and -5%
@@ -717,17 +811,17 @@ export default function DepositForm() {
   const activePlotBox = { x: 38, width: chartWidth > 0 ? chartWidth - 46 : 400 }
 
   // BUG 3 FIX: canSubmit only requires the relevant amount(s) for the deposit mode
-  const canSubmit = !!program && !!wallet.publicKey && !!poolPda && !!tokenMint0 && !!tokenMint1 && !!tokenVault0 && !!tokenVault1 && !rangeIsInvalid
-    && (depositMode === 'token0Only' ? Number(amount0) > 0
-      : depositMode === 'token1Only' ? Number(amount1) > 0
-        : Number(amount0) > 0 && Number(amount1) > 0)
+  const canSubmit = !!program && !!wallet.publicKey && !!poolPda && !!tokenMint0 && !!tokenMint1 && !!tokenVault0 && !!tokenVault1 && !rangeIsInvalid && !isCalculating
+    && (depositMode === 'token0Only' ? Number(amount0.replace(/,/g, '')) > 0
+      : depositMode === 'token1Only' ? Number(amount1.replace(/,/g, '')) > 0
+        : Number(amount0.replace(/,/g, '')) > 0 && Number(amount1.replace(/,/g, '')) > 0)
 
   const onDeposit = async () => {
     if (!program || !wallet.publicKey || !poolPda || !tokenMint0 || !tokenMint1 || !tokenVault0 || !tokenVault1) return
 
     // BUG 3 FIX: Allow single-sided deposits — only require the relevant amount(s)
-    const a0 = Number(amount0)
-    const a1 = Number(amount1)
+    const a0 = Number(amount0.replace(/,/g, ''))
+    const a1 = Number(amount1.replace(/,/g, ''))
     if (depositMode === 'token0Only' && a0 <= 0) {
       setTxState({ status: 'error', title: 'Invalid deposit', message: 'Enter a positive amount for token 0.' })
       return
@@ -753,28 +847,39 @@ export default function DepositForm() {
     const tickArrayLowerStartIndex = tickArrayStartIndex(adjustedLower, tickSpacing)
     const tickArrayUpperStartIndex = tickArrayStartIndex(adjustedUpper, tickSpacing)
 
+    let tokenProgram0Id = TOKEN_PROGRAM_ID
+    let tokenProgram1Id = TOKEN_PROGRAM_ID
+    try {
+      const resp0 = await callWithRetry(() => connection.getParsedAccountInfo(tokenMint0))
+      if (resp0?.value?.owner) tokenProgram0Id = resp0.value.owner
+    } catch (e) {}
+    try {
+      const resp1 = await callWithRetry(() => connection.getParsedAccountInfo(tokenMint1))
+      if (resp1?.value?.owner) tokenProgram1Id = resp1.value.owner
+    } catch (e) {}
+
     const positionNftMint = Keypair.generate()
     const positionNftAccount = getAssociatedTokenAddressSync(positionNftMint.publicKey, wallet.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
     const metadataAccount = PublicKey.findProgramAddressSync(
       [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), positionNftMint.publicKey.toBuffer()],
       METADATA_PROGRAM_ID,
     )[0]
-    const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0, wallet.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
-    const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1, wallet.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+    const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0, wallet.publicKey, false, tokenProgram0Id, ASSOCIATED_TOKEN_PROGRAM_ID)
+    const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1, wallet.publicKey, false, tokenProgram1Id, ASSOCIATED_TOKEN_PROGRAM_ID)
     const personalPosition = getPositionAddress(positionNftMint.publicKey, program.programId)[0]
     const tickArrayLower = getTickArrayAddress(poolPda, tickArrayLowerStartIndex, program.programId)[0]
     const tickArrayUpper = getTickArrayAddress(poolPda, tickArrayUpperStartIndex, program.programId)[0]
 
-    const amount0Max = new BN(Math.max(0, Math.floor(Number(amount0) * 10 ** decimals0 * slippageTolerance)))
-    const amount1Max = new BN(Math.max(0, Math.floor(Number(amount1) * 10 ** decimals1 * slippageTolerance)))
+    const amount0Max = new BN(Math.max(0, Math.floor(Number(amount0.replace(/,/g, '')) * 10 ** decimals0 * slippageTolerance)))
+    const amount1Max = new BN(Math.max(0, Math.floor(Number(amount1.replace(/,/g, '')) * 10 ** decimals1 * slippageTolerance)))
 
     const calcLiquidity = () => {
       const sqrtP = Math.pow(1.0001, priceTick / 2)
       const sqrtPL = Math.pow(1.0001, adjustedLower / 2)
       const sqrtPU = Math.pow(1.0001, adjustedUpper / 2)
       
-      const a0 = Number(amount0) * Math.pow(10, decimals0)
-      const a1 = Number(amount1) * Math.pow(10, decimals1)
+      const a0 = Number(amount0.replace(/,/g, '')) * Math.pow(10, decimals0)
+      const a1 = Number(amount1.replace(/,/g, '')) * Math.pow(10, decimals1)
       
       let L: number
       if (priceTick < adjustedLower) {
@@ -862,16 +967,17 @@ export default function DepositForm() {
       })
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
 
-      addTransaction(signature, `Deposited liquidity into ${token0Name} / ${token1Name}`)
+      addTransaction(signature, `Deposited liquidity into ${token0Name} / ${token1Name}`, 'Deposit', true)
 
       const mintAddress = positionNftMint.publicKey.toBase58()
       const positionAddressStr = personalPosition.toBase58()
 
       setTxState({
         status: 'success',
-        title: 'Deposit successful',
-        message: 'Your position NFT was minted and returned to your wallet.',
-        signature,
+        title: 'Deposit Successful',
+        message: 'Successfully deposited liquidity and minted a position NFT.',
+        signature: signature,
+        explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
         details: [
           `NFT mint: ${mintAddress}`,
           `Position: ${positionAddressStr}`,
@@ -888,6 +994,12 @@ export default function DepositForm() {
       if (refreshPools) {
         refreshPools()
       }
+      // Clear the batch cache so Liquidity page fetches fresh data
+      if (wallet.publicKey) {
+        triggerPoolsRefetch(wallet.publicKey.toBase58())
+      }
+      // Refresh positions for the Portfolio page
+      refreshPositions()
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const error = err as any
@@ -910,6 +1022,17 @@ export default function DepositForm() {
       </div>
 
       <div className="deposit-shell">
+        {txState && (
+          <TransactionCard
+            status={txState.status}
+            title={txState.title}
+            message={txState.message}
+            signature={txState.signature}
+            explorerUrl={txState.explorerUrl}
+            details={txState.details}
+            onClose={() => setTxState(null)}
+          />
+        )}
         {/* ── Hero card ── */}
         <div className="deposit-hero-card">
           <div className="deposit-hero-left">
@@ -1146,42 +1269,20 @@ export default function DepositForm() {
                   <h2>Add Deposit Amount</h2>
                   <p>Enter token amounts for each side of the position.</p>
                 </div>
-                <div style={{ position: 'relative' }}>
-                  <button 
-                    type="button" 
-                    className="deposit-slippage-btn"
-                    onClick={() => setShowSlippageOverlay(!showSlippageOverlay)}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 28 28" fill="#fff" className="chakra-icon chakra-icon-hover" color="var(--text-secondary)" aria-hidden="true" focusable="false" data-sentry-element="svg" data-sentry-component="MoreListControllers" data-sentry-source-file="MoreListControllers.tsx"><path d="M17.5 7.875C17.0358 7.87488 16.5906 7.69035 16.2624 7.362C15.9342 7.03365 15.7499 6.58837 15.75 6.12413C15.7501 5.65988 15.9346 5.2147 16.263 4.88651C16.5914 4.55832 17.0366 4.37401 17.5009 4.37413C17.7307 4.37418 17.9584 4.41952 18.1707 4.50754C18.3831 4.59556 18.576 4.72454 18.7385 4.88713C18.901 5.04971 19.0299 5.24271 19.1178 5.4551C19.2057 5.6675 19.2509 5.89513 19.2509 6.125C19.2508 6.35487 19.2055 6.58248 19.1175 6.79483C19.0294 7.00718 18.9005 7.20012 18.7379 7.36262C18.5753 7.52512 18.3823 7.65401 18.1699 7.74192C17.9575 7.82984 17.7299 7.87506 17.5 7.875ZM20.8757 5.25C20.4846 3.745 19.1257 2.625 17.5 2.625C15.8743 2.625 14.5154 3.745 14.1243 5.25H3.5V7H14.1243C14.5154 8.505 15.8743 9.625 17.5 9.625C19.1257 9.625 20.4846 8.505 20.8757 7H24.5V5.25H20.8757ZM17.5 23.625C17.2701 23.6249 17.0425 23.5796 16.8302 23.4916C16.6178 23.4036 16.4249 23.2746 16.2624 23.112C16.0999 22.9494 15.971 22.7564 15.8831 22.544C15.7952 22.3316 15.7499 22.104 15.75 21.8741C15.7501 21.6443 15.7954 21.4166 15.8834 21.2043C15.9714 20.9919 16.1004 20.799 16.263 20.6365C16.4256 20.474 16.6186 20.3451 16.831 20.2572C17.0434 20.1693 17.271 20.1241 17.5009 20.1241C17.9651 20.1242 18.4103 20.3088 18.7385 20.6371C19.0667 20.9655 19.251 21.4108 19.2509 21.875C19.2508 22.3392 19.0662 22.7844 18.7379 23.1126C18.4095 23.4408 17.9642 23.6251 17.5 23.625ZM17.5 18.375C15.8743 18.375 14.5154 19.495 14.1243 21H3.5V22.75H14.1243C14.5154 24.255 15.8743 25.375 17.5 25.375C19.1257 25.375 20.4846 24.255 20.8757 22.75H24.5V21H20.8757C20.4846 19.495 19.1257 18.375 17.5 18.375ZM10.5 15.75C10.2701 15.7499 10.0425 15.7046 9.83017 15.6166C9.61782 15.5286 9.42488 15.3996 9.26238 15.237C9.09988 15.0744 8.97099 14.8814 8.88308 14.669C8.79516 14.4566 8.74994 14.229 8.75 13.9991C8.75006 13.7693 8.79539 13.5416 8.88341 13.3293C8.97143 13.1169 9.10042 12.924 9.263 12.7615C9.42558 12.599 9.61858 12.4701 9.83098 12.3822C10.0434 12.2943 10.271 12.2491 10.5009 12.2491C10.9651 12.2492 11.4103 12.4338 11.7385 12.7621C12.0667 13.0905 12.251 13.5358 12.2509 14C12.2508 14.4642 12.0662 14.9094 11.7379 15.2376C11.4095 15.5658 10.9642 15.7501 10.5 15.75ZM10.5 10.5C8.87425 10.5 7.51538 11.62 7.12425 13.125H3.5V14.875H7.12425C7.51538 16.38 8.87425 17.5 10.5 17.5C12.1257 17.5 13.4846 16.38 13.8757 14.875H24.5V13.125H13.8757C13.4846 11.62 12.1257 10.5 10.5 10.5Z" data-sentry-element="path" data-sentry-source-file="MoreListControllers.tsx"></path></svg>
-                    {((slippageTolerance - 1) * 100).toFixed(1).replace('.0', '')}%
-                  </button>
-                  {showSlippageOverlay && (
-                    <div className="deposit-slippage-overlay">
-                      <div className="deposit-slippage-title">Max Slippage Tolerance</div>
-                      <div className="deposit-slippage-options">
-                        <button type="button" className={`deposit-slippage-option${slippageTolerance === 1.01 ? ' active' : ''}`} onClick={() => { setSlippageTolerance(1.01); setShowSlippageOverlay(false) }}>1%</button>
-                        <button type="button" className={`deposit-slippage-option${slippageTolerance === 1.025 ? ' active' : ''}`} onClick={() => { setSlippageTolerance(1.025); setShowSlippageOverlay(false) }}>2.5%</button>
-                        <button type="button" className={`deposit-slippage-option${slippageTolerance === 1.035 ? ' active' : ''}`} onClick={() => { setSlippageTolerance(1.035); setShowSlippageOverlay(false) }}>3.5%</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: priceOrientation === 'token1PerToken0' ? 'column' : 'column-reverse', gap: '16px' }}>
                 {/* Token 0 card */}
-                <div className="deposit-token-card" style={{ position: 'relative' }}>
+                <div className={`deposit-token-card ${exceedBalance0 ? 'deposit-token-card-invalid' : ''}`} style={{ position: 'relative' }}>
                   <div className={depositMode === 'token1Only' ? 'is-locked-blur' : ''}>
                     <div className="deposit-token-top modal-token-top-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <TokenBadge mint={tokenMint0} name={token0Name} color={token0Color} />
                       <div className="deposit-balance-box">
                         <img src="/src/assets/wallet.svg" alt="wallet" className="wallet-icon" />
                         <span>{formatAmount(balance0)}</span>
-                        {balance0 > 0 && (
                           <>
-                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount0(formatAmount(balance0 * 0.5)); setActiveField('amount0') }}>50%</button>
-                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount0(formatAmount(balance0)); setActiveField('amount0') }}>MAX</button>
+                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount0(formatInputAmount(balance0)); setActiveField('amount0') }}>MAX</button>
+                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount0(formatInputAmount(balance0 * 0.5)); setActiveField('amount0') }}>50%</button>
                           </>
-                        )}
                       </div>
                     </div>
                     <div className="deposit-token-row">
@@ -1213,19 +1314,17 @@ export default function DepositForm() {
                 </div>
                 <div className="deposit-plus">+</div>
                 {/* Token 1 card */}
-                <div className="deposit-token-card" style={{ position: 'relative' }}>
+                <div className={`deposit-token-card ${exceedBalance1 ? 'deposit-token-card-invalid' : ''}`} style={{ position: 'relative' }}>
                   <div className={depositMode === 'token0Only' ? 'is-locked-blur' : ''}>
                     <div className="deposit-token-top modal-token-top-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <TokenBadge mint={tokenMint1} name={token1Name} color={token1Color} />
                       <div className="deposit-balance-box">
                         <img src="/src/assets/wallet.svg" alt="wallet" className="wallet-icon" />
                         <span>{formatAmount(balance1)}</span>
-                        {balance1 > 0 && (
                           <>
-                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount1(formatAmount(balance1 * 0.5)); setActiveField('amount1') }}>50%</button>
-                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount1(formatAmount(balance1)); setActiveField('amount1') }}>MAX</button>
+                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount1(formatInputAmount(balance1)); setActiveField('amount1') }}>MAX</button>
+                            <button type="button" className="deposit-quick-btn" onClick={() => { setAmount1(formatInputAmount(balance1 * 0.5)); setActiveField('amount1') }}>50%</button>
                           </>
-                        )}
                       </div>
                     </div>
                     <div className="deposit-token-row">
@@ -1266,8 +1365,22 @@ export default function DepositForm() {
                   <strong>{depositRatio}</strong>
                 </div>
               </div>
-              <button className="deposit-submit" type="button" disabled={!canSubmit || busy} onClick={() => { void onDeposit() }} id="deposit-submit-btn">
-                {busy ? 'Depositing…' : rangeIsInvalid ? 'Invalid price range' : depositMode !== 'both' ? `Deposit ${depositMode === 'token0Only' ? token0Name : token1Name} Only` : 'Deposit'}
+              <button className={`deposit-submit ${exceedBalance ? 'insufficient-balance-btn' : ''}`} type="button" disabled={loadingPools || !canSubmit || busy || exceedBalance} onClick={() => { void onDeposit() }} id="deposit-submit-btn">
+                {loadingPools ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <svg className="spinner" viewBox="0 0 50 50" style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }}>
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                    </svg>
+                    Loading data...
+                  </span>
+                ) : isCalculating ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <svg className="spinner" viewBox="0 0 50 50" style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }}>
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                    </svg>
+                    Calculating...
+                  </span>
+                ) : busy ? 'Processing...' : exceedBalance ? 'Insufficient Balance' : rangeIsInvalid ? 'Invalid price range' : depositMode !== 'both' ? `Deposit ${depositMode === 'token0Only' ? token0Name : token1Name} Only` : 'Deposit'}
               </button>
             </div>
             {rangeIsInvalid && (
@@ -1279,16 +1392,6 @@ export default function DepositForm() {
             )}
           </section>
         </div>
-        {txState && (
-          <TransactionCard
-            status={txState.status}
-            title={txState.title}
-            message={txState.message}
-            signature={txState.signature}
-            details={txState.details}
-            onClose={() => setTxState(null)}
-          />
-        )}
       </div>
       {/* ── NFT Minted overlay ── */}
       {nftOverlay && (

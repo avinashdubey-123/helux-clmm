@@ -1,0 +1,327 @@
+.fpp-container {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+}
+
+.fpp-input-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+
+.fpp-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  padding-right: 40px;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.fpp-input:focus {
+  border-color: #39d0d8;
+}
+
+.fpp-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fpp-input-wrapper:hover .fpp-icon {
+  opacity: 1;
+}
+
+/* Overlay & Backdrop */
+.fpp-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fpp-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+/* Dropdown */
+.fpp-dropdown {
+  position: relative;
+  background: #1c212e; /* dark grayish blue like in image */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  width: 580px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  color: #e6f0ff;
+}
+
+.fpp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.fpp-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.fpp-close-btn {
+  background: transparent;
+  border: none;
+  color: #7a8fa6;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.fpp-close-btn:hover {
+  color: #fff;
+}
+
+.fpp-body {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+
+.fpp-left, .fpp-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.fpp-label {
+  font-size: 14px;
+  color: #e6f0ff;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* Calendar Card */
+.fpp-calendar-card {
+  background: #131720;
+  border-radius: 12px;
+  padding: 16px;
+  height: 280px;
+}
+
+.fpp-cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.fpp-cal-nav {
+  background: transparent;
+  border: none;
+  color: #7a8fa6;
+  font-size: 16px;
+  cursor: pointer;
+}
+.fpp-cal-nav:hover { color: #fff; }
+
+.fpp-cal-month {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.fpp-cal-days-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 8px;
+}
+
+.fpp-cal-days-header div {
+  text-align: center;
+  font-size: 12px;
+  color: #e6f0ff;
+  font-weight: 600;
+}
+
+.fpp-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.fpp-day {
+  background: transparent;
+  border: none;
+  color: #7a8fa6;
+  font-size: 14px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.fpp-day:hover:not(.empty):not(.selected) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.fpp-day.selected {
+  background: #cce0ff;
+  color: #0b1221;
+  font-weight: bold;
+}
+
+/* Right Side Elements */
+.fpp-time-row {
+  display: flex;
+  gap: 12px;
+}
+
+.fpp-select-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.fpp-select {
+  width: 100%;
+  appearance: none;
+  background: #131720;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
+}
+
+.fpp-select:focus, .fpp-duration-input:focus {
+  border-color: #39d0d8;
+}
+
+.fpp-select-wrapper::after {
+  content: "⌄";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #fff;
+  pointer-events: none;
+}
+
+.fpp-duration-input {
+  background: #131720;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fpp-duration-input.fpp-error {
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+}
+
+/* Summary Card */
+.fpp-summary-card {
+  margin-top: 24px;
+  background: #2a3345;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.fpp-summary-label {
+  color: #7a8fa6;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.fpp-summary-date {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.fpp-summary-time {
+  color: #7a8fa6;
+  font-size: 14px;
+}
+
+/* Footer Buttons */
+.fpp-footer {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 24px;
+}
+
+.fpp-btn-cancel {
+  background: transparent;
+  border: 1px solid #39d0d8;
+  color: #39d0d8;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fpp-btn-confirm {
+  background: #39d0d8;
+  border: none;
+  color: #0b1221;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.fpp-btn-confirm:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: #7a8fa6;
+  cursor: not-allowed;
+}
+
+.fpp-btn-cancel:hover {
+  background: rgba(57, 208, 216, 0.1);
+}
+.fpp-btn-confirm:hover:not(:disabled) {
+  opacity: 0.9;
+}

@@ -1,15 +1,89 @@
-import { useState, useMemo } from 'react'
+import { useRef, useState, useMemo, useEffect } from 'react'
 import './Portfolio.css'
 import { usePositions, getTokensFromLiquidity, PositionRowData } from '../../hooks/usePositions'
 import { usePools, PoolRowData } from '../../contexts/PoolsContext'
 import { useTransactions } from '../../contexts/TxContext'
+import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
 import Loader from '../../components/Loader/Loader'
 import IncreaseLiquidityModal from './IncreaseLiquidityModal'
 import DecreaseLiquidityModal from './DecreaseLiquidityModal'
+import Farms from './Farms'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
-import { PublicKey, Transaction } from '@solana/web3.js'
+import { PublicKey, Transaction, AccountMeta } from '@solana/web3.js'
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token'
+import { BN } from '@coral-xyz/anchor'
 import useProgram from '../../utils/useProgram'
+import { getTickArrayAddress } from '../../utils/pda'
+import copyIcon from '../../assets/copy.svg'
+import { getRealTimePendingReward } from '../../utils/rewardMath'
+
+const clampTick = (tick: number, spacing: number, direction: 'down' | 'up') => {
+  const safeSpacing = Math.max(1, spacing)
+  const snapped = direction === 'down'
+    ? Math.floor(tick / safeSpacing) * safeSpacing
+    : Math.ceil(tick / safeSpacing) * safeSpacing
+  return Math.max(-443636, Math.min(443636, snapped))
+}
+
+const tickArrayStartIndex = (tick: number, spacing: number) => {
+  const tickCount = 60 * Math.max(1, spacing)
+  return Math.floor(tick / tickCount) * tickCount
+}
+
+function PoolIconHover({ pool, t0Name, t1Name, t0Color, t1Color }: { pool: PoolRowData, t0Name: string, t1Name: string, t0Color: string, t1Color: string }) {
+  const [hoverVisible, setHoverVisible] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const hoverTimeout = useRef<number | null>(null)
+
+  const showHover = () => {
+    if (hoverTimeout.current) { window.clearTimeout(hoverTimeout.current); hoverTimeout.current = null }
+    setHoverVisible(true)
+  }
+  
+  const hideHover = () => {
+    if (hoverTimeout.current) { window.clearTimeout(hoverTimeout.current); hoverTimeout.current = null }
+    hoverTimeout.current = window.setTimeout(() => setHoverVisible(false), 150)
+  }
+
+  const copyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(null), 2000)
+    } catch (e) {}
+  }
+
+  return (
+    <div className="deposit-hover-wrapper" onMouseEnter={showHover} onMouseLeave={hideHover} style={{ cursor: 'pointer' }}>
+      <div className="pool-icons">
+        <div className="pool-icon pool-icon-primary" style={{ background: t0Color }}>{t0Name.slice(0, 2)}</div>
+        <div className="pool-icon pool-icon-secondary" style={{ background: t1Color }}>{t1Name.slice(0, 2)}</div>
+      </div>
+      {hoverVisible && (
+        <div className="deposit-hover-card" style={{ left: '0', top: '35px', zIndex: 100 }}>
+          <div className="deposit-hover-row">
+            <span><strong>Pool id:</strong> {pool.poolPda ?? 'unknown'}</span>
+            <button className="deposit-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(pool.poolPda, 'pool') }}>
+              {copiedKey === 'pool' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
+            </button>
+          </div>
+          <div className="deposit-hover-row">
+            <span><strong>Token0:</strong> {pool.tokenMint0 ?? '-'}</span>
+            <button className="deposit-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(pool.tokenMint0, 'token0') }}>
+              {copiedKey === 'token0' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
+            </button>
+          </div>
+          <div className="deposit-hover-row">
+            <span><strong>Token1:</strong> {pool.tokenMint1 ?? '-'}</span>
+            <button className="deposit-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(pool.tokenMint1, 'token1') }}>
+              {copiedKey === 'token1' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function addressToColor(addr: string) {
   const hash = addr.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0)
@@ -25,20 +99,127 @@ function formatAmount(amount: number) {
   return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
 }
 
+
+const buildHarvestInstruction = async (
+  pos: PositionRowData,
+  pool: PoolRowData,
+  program: any,
+  publicKey: PublicKey,
+  connection: any
+) => {
+  const poolPda = new PublicKey(pool.poolPda);
+  const tickSpacing = pool.tickSpacing;
+  const adjustedLower = clampTick(pos.tickLower, tickSpacing, 'down');
+  const adjustedUpper = clampTick(pos.tickUpper, tickSpacing, 'up');
+  
+  const tickArrayLowerStartIndex = tickArrayStartIndex(adjustedLower, tickSpacing);
+  const tickArrayUpperStartIndex = tickArrayStartIndex(adjustedUpper, tickSpacing);
+
+  const positionNftMint = new PublicKey(pos.nftMint);
+  const positionNftAccount = getAssociatedTokenAddressSync(positionNftMint, publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+  const tokenMint0Key = new PublicKey(pool.tokenMint0);
+  const tokenMint1Key = new PublicKey(pool.tokenMint1);
+  
+  let tokenProgram0Id = TOKEN_PROGRAM_ID;
+  let tokenProgram1Id = TOKEN_PROGRAM_ID;
+  try {
+    const resp0 = await connection.getParsedAccountInfo(tokenMint0Key);
+    if (resp0?.value?.owner) tokenProgram0Id = resp0.value.owner;
+  } catch (e) {}
+  try {
+    const resp1 = await connection.getParsedAccountInfo(tokenMint1Key);
+    if (resp1?.value?.owner) tokenProgram1Id = resp1.value.owner;
+  } catch (e) {}
+
+  const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0Key, publicKey, false, tokenProgram0Id, ASSOCIATED_TOKEN_PROGRAM_ID);
+  const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1Key, publicKey, false, tokenProgram1Id, ASSOCIATED_TOKEN_PROGRAM_ID);
+  
+  const tickArrayLower = getTickArrayAddress(poolPda, tickArrayLowerStartIndex, program.programId)[0];
+  const tickArrayUpper = getTickArrayAddress(poolPda, tickArrayUpperStartIndex, program.programId)[0];
+
+  const remainingAccounts: AccountMeta[] = [];
+  if (pool.rewardInfos) {
+    for (const ri of pool.rewardInfos) {
+      if (ri.initialized && ri.tokenMint !== "11111111111111111111111111111111") {
+        const rewardMint = new PublicKey(ri.tokenMint);
+        // @ts-ignore
+        const poolStateAcc = await program.account.poolState.fetch(poolPda);
+        const rewardIndex = pool.rewardInfos.indexOf(ri);
+        const rewardVault = poolStateAcc.rewardInfos[rewardIndex].tokenVault;
+        
+        let rewardProgramId = TOKEN_PROGRAM_ID;
+        try {
+          const resp = await connection.getParsedAccountInfo(rewardMint);
+          if (resp?.value?.owner) rewardProgramId = resp.value.owner;
+        } catch (e) {}
+
+        const userRewardAccount = getAssociatedTokenAddressSync(rewardMint, publicKey, false, rewardProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
+        
+        remainingAccounts.push({ pubkey: rewardVault, isSigner: false, isWritable: true });
+        remainingAccounts.push({ pubkey: userRewardAccount, isSigner: false, isWritable: true });
+        remainingAccounts.push({ pubkey: rewardMint, isSigner: false, isWritable: false });
+      }
+    }
+  }
+
+  return program.methods.decreaseLiquidityV2(
+    new BN(0), // liquidity to remove is 0
+    new BN(0),
+    new BN(0)
+  ).accounts({
+    nftOwner: publicKey,
+    nftAccount: positionNftAccount,
+    personalPosition: new PublicKey(pos.positionPda),
+    poolState: poolPda,
+    protocolPosition: PublicKey.default,
+    tokenVault0: new PublicKey(pool.tokenVault0),
+    tokenVault1: new PublicKey(pool.tokenVault1),
+    tickArrayLower,
+    tickArrayUpper,
+    recipientTokenAccount0: tokenAccount0,
+    recipientTokenAccount1: tokenAccount1,
+    tokenProgram: TOKEN_PROGRAM_ID,
+    tokenProgram2022: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
+    memoProgram: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+    vault0Mint: tokenMint0Key,
+    vault1Mint: tokenMint1Key
+  }).remainingAccounts(remainingAccounts);
+};
+
+
 export default function Portfolio() {
+
   const { positions, loadingPositions, positionsError, refreshPositions } = usePositions()
-  const { pools, loadingPools } = usePools()
+  const { pools, loadingPools, refreshPools } = usePools()
   const { transactions, addTransaction } = useTransactions()
-  const [activeTab, setActiveTab] = useState<'invested' | 'liquidity' | 'activity'>('liquidity')
+  const [activeTab, setActiveTabState] = useState<'invested' | 'liquidity' | 'activity' | 'farms'>(() => {
+    return (sessionStorage.getItem('portfolioTab') as any) || 'liquidity'
+  })
+
+  const setActiveTab = (tab: 'invested' | 'liquidity' | 'activity' | 'farms') => {
+    sessionStorage.setItem('portfolioTab', tab)
+    setActiveTabState(tab)
+  }
   const [searchQuery, setSearchQuery] = useState('')
+  const [nowSec, setNowSec] = useState(Math.floor(Date.now() / 1000))
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowSec(Math.floor(Date.now() / 1000))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const { connection } = useConnection()
   const { publicKey, signTransaction } = useWallet()
   const program = useProgram()
 
+
   const [activeModal, setActiveModal] = useState<'increase' | 'decrease' | null>(null)
+
   const [selectedPosition, setSelectedPosition] = useState<{ pool: PoolRowData; position: PositionRowData } | null>(null)
   const [busyClosing, setBusyClosing] = useState<string | null>(null)
+  const [txState, setTxState] = useState<{status: 'success' | 'error' | 'info', title: string, message: string, details?: string} | null>(null)
 
   const poolsById = useMemo(() => {
     const map = new Map<string, PoolRowData>()
@@ -166,11 +347,72 @@ export default function Portfolio() {
 
       addTransaction(signature, `Closed position for ${t0Name}/${t1Name}`)
       refreshPositions()
+      refreshPools()
     } catch (err: any) {
       console.error('Failed to close position', err)
-      alert(err.message || 'Failed to close position')
+      
+      let details = err.message || '';
+      if (err.logs && Array.isArray(err.logs)) {
+         details += '\n\nLogs:\n' + err.logs.join('\n');
+      } else if (err.stack) {
+         details += '\n\n' + err.stack;
+      }
+
+      let shortMessage = 'Failed to close position';
+      if (err.message?.includes('User rejected')) {
+        shortMessage = 'User rejected the request';
+      } else if (err.message?.includes('Simulation failed') || err.message?.includes('simulation failed')) {
+        shortMessage = 'Transaction simulation failed';
+      }
+
+      setTxState({ status: 'error', title: 'Close Position Failed', message: shortMessage, details })
     } finally {
       setBusyClosing(null)
+    }
+  }
+
+  const handleHarvest = async (pos: PositionRowData, pool: PoolRowData) => {
+    if (!program || !publicKey || !signTransaction) return;
+    setBusyClosing(pos.positionPda + '_harvest');
+
+    const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase();
+    const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase();
+
+    try {
+      const builder = await buildHarvestInstruction(pos, pool, program, publicKey, connection);
+      const instruction = await builder.instruction();
+
+      const tx = new Transaction().add(instruction);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+      tx.feePayer = publicKey;
+      tx.recentBlockhash = blockhash;
+
+      const signedTx = await signTransaction(tx);
+      const rawTransaction = signedTx.serialize();
+      const signature = await connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed'
+      });
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+      
+      addTransaction(signature, `Harvested rewards for ${t0Name}/${t1Name}`);
+      refreshPositions();
+      refreshPools();
+    } catch (err: any) {
+      console.error(err);
+      let details = err.message || '';
+      if (err.logs && Array.isArray(err.logs)) {
+         details += '\n\nLogs:\n' + err.logs.join('\n');
+      } else if (err.stack) {
+         details += '\n\n' + err.stack;
+      }
+      let shortMessage = 'Failed to harvest rewards';
+      if (err.message?.includes('User rejected')) {
+        shortMessage = 'User rejected the request';
+      }
+      setTxState({ status: 'error', title: 'Transaction Failed', message: shortMessage, details });
+    } finally {
+      setBusyClosing(null);
     }
   }
 
@@ -196,6 +438,12 @@ export default function Portfolio() {
             My Liquidity
           </button>
           <button
+            className={`portfolio-tab ${activeTab === 'farms' ? 'active' : ''}`}
+            onClick={() => setActiveTab('farms')}
+          >
+            My Farms
+          </button>
+          <button
             className={`portfolio-tab ${activeTab === 'activity' ? 'active' : ''}`}
             onClick={() => setActiveTab('activity')}
           >
@@ -206,33 +454,43 @@ export default function Portfolio() {
 
       {activeTab === 'invested' && (
         <div className="portfolio-invested-tab">
-          <div className="portfolio-summary-card">
-            <h3 className="portfolio-tokens-header">Invested Assets</h3>
-            <div className="portfolio-tokens-list">
-              {tokenStats.length === 0 ? (
-                <div className="portfolio-empty-state">No tokens invested yet.</div>
-              ) : (
-                tokenStats.map(stat => (
-                  <div key={stat.tokenName} className="portfolio-token-row">
-                    <div className="token-row-left">
-                      <div className="pool-icon" style={{ background: addressToColor(stat.tokenName) }}>
-                        {stat.tokenName.slice(0, 2)}
-                      </div>
-                      <strong className="token-name-strong">{stat.tokenName}</strong>
-                    </div>
-                    <div className="token-row-right">
-                      <button
-                        className="token-pools-link"
-                        onClick={() => handleInvestedPoolClick(stat.tokenName)}
-                      >
-                        {stat.poolCount} {stat.poolCount === 1 ? 'pool' : 'pools'} invested &rarr;
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+          {isLoading ? (
+            <div className="portfolio-loader-container">
+              <Loader size={36} />
             </div>
-          </div>
+          ) : !publicKey ? (
+            <div className="portfolio-empty-container">
+              <p>Please connect your wallet to view and manage your portfolio.</p>
+            </div>
+          ) : (
+            <div className="portfolio-summary-card">
+              <h3 className="portfolio-tokens-header">Invested Assets</h3>
+              <div className="portfolio-tokens-list">
+                {tokenStats.length === 0 ? (
+                  <div className="portfolio-empty-state">No tokens invested yet.</div>
+                ) : (
+                  tokenStats.map(stat => (
+                    <div key={stat.tokenName} className="portfolio-token-row">
+                      <div className="token-row-left">
+                        <div className="pool-icon" style={{ background: addressToColor(stat.tokenName) }}>
+                          {stat.tokenName.slice(0, 2)}
+                        </div>
+                        <strong className="token-name-strong">{stat.tokenName}</strong>
+                      </div>
+                      <div className="token-row-right">
+                        <button
+                          className="token-pools-link"
+                          onClick={() => handleInvestedPoolClick(stat.tokenName)}
+                        >
+                          {stat.poolCount} {stat.poolCount === 1 ? 'pool' : 'pools'} invested &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -268,29 +526,35 @@ export default function Portfolio() {
 
       {activeTab === 'liquidity' && (
         <div className="portfolio-liquidity-tab">
-          <div className="portfolio-search-bar">
-            <input
-              type="text"
-              placeholder="Search by token symbol, pair name, or pool address..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
+          {isLoading ? (
+            <div className="portfolio-loader-container">
+              <Loader size={36} />
+            </div>
+          ) : !publicKey ? (
+            <div className="portfolio-empty-container">
+              <p>Please connect your wallet to view and manage your portfolio.</p>
+            </div>
+          ) : (
+            <>
+              <div className="portfolio-search-bar">
+                <input
+                  type="text"
+                  placeholder="Search by token symbol, pair name, or pool address..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+              </div>
 
-          <div className="portfolio-pools-list">
-            {isLoading ? (
-              <div className="portfolio-loader-container">
-                <Loader size={36} />
-              </div>
-            ) : positionsError ? (
-              <div className="portfolio-error-container">
-                Error loading positions: {positionsError}
-              </div>
-            ) : filteredPools.length === 0 ? (
-              <div className="portfolio-empty-container">
-                No positions found.
-              </div>
-            ) : (
+              <div className="portfolio-pools-list">
+                {positionsError ? (
+                  <div className="portfolio-error-container">
+                    Error loading positions: {positionsError}
+                  </div>
+                ) : filteredPools.length === 0 ? (
+                  <div className="portfolio-empty-container">
+                    No positions found.
+                  </div>
+                ) : (
               filteredPools.map(poolId => {
                 const pool = poolsById.get(poolId)
                 if (!pool) return null
@@ -310,10 +574,7 @@ export default function Portfolio() {
                       onClick={() => togglePool(poolId)}
                     >
                       <div className="pool-header-left">
-                        <div className="pool-icons">
-                          <div className="pool-icon pool-icon-primary" style={{ background: t0Color }}>{t0Name.slice(0, 2)}</div>
-                          <div className="pool-icon pool-icon-secondary" style={{ background: t1Color }}>{t1Name.slice(0, 2)}</div>
-                        </div>
+                        <PoolIconHover pool={pool} t0Name={t0Name} t1Name={t1Name} t0Color={t0Color} t1Color={t1Color} />
                         <h3 className="pool-name">{t0Name} / {t1Name}</h3>
                         <span className="pool-positions-count">
                           {poolPositions.length} position{poolPositions.length === 1 ? '' : 's'}
@@ -387,10 +648,57 @@ export default function Portfolio() {
                               {isPosExpanded && (
                                 <div className="portfolio-position-details">
                                   <div className="pos-details-left">
-                                    <div className="pos-details-label">Unclaimed Fees</div>
-                                    <div className="pos-details-value">0.00 {t0Name} | 0.00 {t1Name}</div>
+                                    {pos.rewardInfos.some((_, i) => {
+                                      const poolRewardInfo = pool.rewardInfos?.[i];
+                                      return poolRewardInfo?.initialized && poolRewardInfo.tokenMint !== "11111111111111111111111111111111";
+                                    }) ? (
+                                      <>
+                                        <div className="pos-details-label">Pending Rewards</div>
+                                        <div className="pos-details-value">
+                                          {pos.rewardInfos.map((_ri, i) => {
+                                            const amount = getRealTimePendingReward(pos, pool, i, nowSec);
+                                            const poolRewardInfo = pool.rewardInfos?.[i];
+                                            
+                                            // Hide uninitialized farms
+                                            if (!poolRewardInfo?.initialized || poolRewardInfo.tokenMint === "11111111111111111111111111111111") return null;
+                                            
+                                            const farmTokenName = poolRewardInfo.tokenMint.slice(0, 4).toUpperCase();
+
+                                            let displayAmount = "0.00";
+                                            const rewardValue = amount / Math.pow(10, poolRewardInfo.tokenDecimals ?? 6);
+                                            
+                                            const currentNow = Math.floor(Date.now() / 1000);
+                                            const isFarmStarted = poolRewardInfo.openTime <= currentNow;
+                                            
+                                            if ((rewardValue > 0 && rewardValue < 0.1) || (rewardValue === 0 && pos.liquidity !== '0' && isFarmStarted)) {
+                                              displayAmount = "<0.1";
+                                            } else {
+                                              displayAmount = formatAmount(rewardValue);
+                                            }
+
+                                            return (
+                                              <div key={i} className="reward-item">
+                                                {displayAmount} {farmTokenName}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="pos-details-label">No Pending Rewards</div>
+                                    )}
                                   </div>
                                   <div className="pos-details-right">
+                                    <button 
+                                      className="pos-btn pos-btn-harvest"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleHarvest(pos, pool);
+                                      }}
+                                      disabled={busyClosing === pos.positionPda + '_harvest'}
+                                    >
+                                      {busyClosing === pos.positionPda + '_harvest' ? 'Harvesting...' : 'Harvest Rewards'}
+                                    </button>
                                     <button
                                       className={`pos-btn btn-close-position ${pos.liquidity !== '0' ? 'locked' : ''}`}
                                       onClick={(e) => {
@@ -414,8 +722,14 @@ export default function Portfolio() {
                 )
               })
             )}
-          </div>
+            </div>
+            </>
+          )}
         </div>
+      )}
+
+      {activeTab === 'farms' && (
+        <Farms />
       )}
 
       {activeModal === 'increase' && selectedPosition && (
@@ -423,7 +737,7 @@ export default function Portfolio() {
           pool={selectedPosition.pool}
           position={selectedPosition.position}
           onClose={() => { setActiveModal(null); setSelectedPosition(null) }}
-          onSuccess={() => { refreshPositions() }}
+          onSuccess={() => { refreshPositions(); refreshPools() }}
         />
       )}
 
@@ -432,7 +746,18 @@ export default function Portfolio() {
           pool={selectedPosition.pool}
           position={selectedPosition.position}
           onClose={() => { setActiveModal(null); setSelectedPosition(null) }}
-          onSuccess={() => { refreshPositions() }}
+          onSuccess={() => { refreshPositions(); refreshPools() }}
+        />
+      )}
+
+      {txState && (
+        <TxSmallCard
+          status={txState.status}
+          title={txState.title}
+          description={txState.message}
+          details={txState.details}
+          signature={null}
+          onClose={() => setTxState(null)}
         />
       )}
     </div>

@@ -20,12 +20,12 @@
   background: linear-gradient(120deg,
       #39d0d8 0%,
       #2b6cb0 10%,
-      #d000ffce 30%,
+      #d000ffce 25%,
       #39d0d8 45%,
       #2b6cb0 60%,
       #d000ffce 80%,
       #39d0d8 100%);
-  background-size: 200% auto;
+  background-size: 130% auto;
 
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -191,7 +191,13 @@
   background: #131c2e;
   border: 1px solid #1e2d45;
   border-radius: 12px;
-  overflow: hidden;
+  border-radius: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.portfolio-pool-card:hover {
+  z-index: 10;
 }
 
 .portfolio-pool-header {
@@ -267,6 +273,7 @@
 
 .position-range-text {
   font-size: 13px;
+  width: 420px;
   font-weight: 600;
   color: #e6f0ff;
 }
@@ -280,7 +287,7 @@
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 12px;
-  width: 98px;
+  width: 108px;
   border: 1px solid transparent;
   flex-shrink: 0;
 }
@@ -334,10 +341,17 @@
   transition: filter 0.2s;
 }
 
-.pos-btn-deposit {
-  background: #0b1221;
+.pos-btn-deposit,
+.pos-btn-harvest {
+  background: transparent;
   color: #39d0d8;
   border: 1px solid #39d0d8;
+}
+
+.create-farm-btn {
+  background: transparent;
+  color: #aa3bff;
+  border: 1px solid #aa3bff;
 }
 
 .pos-btn-withdraw {
@@ -348,6 +362,12 @@
 
 .pos-btn:hover {
   filter: brightness(0.8);
+}
+
+.collect-rewards-btn {
+  background: #39d0d8;
+  color: #0b1221;
+  border: none;
 }
 
 .portfolio-tokens-list {
@@ -710,7 +730,7 @@
 .portfolio-position-summary {
   padding: 16px 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1.5fr 1fr;
   align-items: center;
   gap: 16px;
   cursor: pointer;
@@ -719,7 +739,7 @@
 .position-status-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
 }
 
 .position-badge-margin {
@@ -925,4 +945,140 @@
   opacity: 0.35;
   pointer-events: none;
   user-select: none;
+}
+
+.deposit-token-card-invalid {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.insufficient-balance-btn:disabled, .insufficient-balance-btn[disabled] {
+  background: #555 !important;
+  color: #aaa !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+/* Reward Stat Box overrides */
+.reward-stat-box {
+  gap: 12px;
+  padding: 20px;
+}
+
+.reward-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reward-stat-title {
+  font-size: 16px;
+  color: #e6f0ff;
+}
+
+.reward-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Farm Row specific overrides */
+.farm-row-card {
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.farm-row-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr 1.2fr 0.8fr max-content;
+  gap: 16px;
+  align-items: center;
+}
+
+.farm-row-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+}
+
+.farm-row-label {
+  font-size: 12px;
+  color: #7a8fa6;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.farm-row-value {
+  font-size: 14px;
+  color: #e6f0ff;
+  font-weight: 600;
+}
+
+.farm-row-title-flex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.farm-row-status-badge {
+  width: auto;
+  margin-left: 0;
+  padding: 4px 12px;
+}
+
+.farm-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: auto;
+  margin-bottom: 4px;
+}
+
+.farm-row-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.farm-row-btn-hollow {
+  background: transparent !important;
+  border: 1px solid #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+.farm-row-body {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #1a2640;
+}
+
+.farm-row-subtitle {
+  margin: 0 0 12px 0;
+  color: #e6f0ff;
+  font-size: 14px;
+}
+
+.farm-row-fields {
+  display: flex;
+  gap: 16px;
+}
+
+.farm-row-field {
+  flex: 1;
+}
+
+.farm-row-input {
+  width: 100%;
+  margin-bottom: 0;
+  padding: 8px;
+}
+
+.farm-row-submit {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }

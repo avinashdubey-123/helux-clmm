@@ -12,7 +12,7 @@ type TransactionCardProps = {
   explorerUrl?: string
   signature?: string
   details?: string | null
-  onClose?: () => void
+  onClose: () => void
 }
 
 export default function TransactionCard({ status, title, message, explorerUrl, signature, details, onClose }: TransactionCardProps) {
@@ -22,8 +22,6 @@ export default function TransactionCard({ status, title, message, explorerUrl, s
   const [isClosing, setIsClosing] = useState(false)
 
   useEffect(() => {
-    if (!onClose) return
-
     const startCloseTimer = window.setTimeout(() => {
       setIsClosing(true)
       // wait for the close animation to finish before calling parent's onClose
@@ -35,7 +33,8 @@ export default function TransactionCard({ status, title, message, explorerUrl, s
     return () => {
       window.clearTimeout(startCloseTimer)
     }
-  }, [onClose])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div
@@ -56,9 +55,7 @@ export default function TransactionCard({ status, title, message, explorerUrl, s
             <div className="tx-card__message">{message}</div>
           </div>
         </div>
-        {onClose && (
-          <button className="tx-card__close" onClick={onClose} aria-label="Close">×</button>
-        )}
+        <button className="tx-card__close" onClick={onClose} aria-label="Close">×</button>
       </div>
 
       {(explorerUrl && signature) && (

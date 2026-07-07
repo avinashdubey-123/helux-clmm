@@ -11,8 +11,7 @@
 }
 
 .admin-page {
-  padding: 112px 18px 80px;
-  max-width: 1200px;
+  padding: 112px 40px 72px;
   margin: 0 auto;
   min-height: 100vh;
   color: var(--admin-text);
@@ -286,6 +285,10 @@
   align-items: center;
 }
 
+.admin-grid-cell.pool-cell {
+  overflow: visible;
+}
+
 .admin-grid-cell.center {
   justify-content: center;
   text-align: center;
@@ -379,7 +382,7 @@
 
 .support-mints-copy-btn:hover {
   background: transparent;
-  border-color: rgba(57, 208, 216, 0.35);
+  border-color: rgba(141, 162, 163, 0.35);
 }
 
 .support-mints-copy-btn.copied {
@@ -426,10 +429,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-all;
+  width: fit-content;
 }
 
 .admin-list-empty {
   color: var(--admin-muted);
+}
+
+.admin-copy-btn {
+  border: none;
+  padding: 1px;
+  align-items: center;
+  cursor: pointer;
+  background: transparent;
 }
 
 @media (max-width: 900px) {
@@ -673,4 +685,201 @@
 .fees-msg{
   margin: 18px 0px;
   text-align: left;
+}
+
+/* CollectFees Styles */
+.collect-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - 80px);
+  padding: 40px 20px;
+}
+
+.collect-card {
+  background: rgba(18, 25, 43, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.collect-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.collect-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+}
+
+.collect-header p {
+  color: #8c9bb5;
+  font-size: 14px;
+  margin: 0;
+}
+
+.collect-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: #8c9bb5;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.collect-close:hover {
+  color: #ffffff;
+}
+
+.collect-token-box {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.collect-token-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.collect-token-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.collect-token-label {
+  color: #8c9bb5;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.collect-token-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.collect-token-values strong {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.collect-token-values small {
+  color: #6b7a99;
+  font-size: 12px;
+}
+
+.collect-amount-section {
+  margin-bottom: 24px;
+}
+
+.collect-amount-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  color: #ffffff;
+}
+
+.collect-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  margin-bottom: 20px;
+}
+
+.collect-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #36c7ff;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(54, 199, 255, 0.5);
+}
+
+.collect-quick-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.collect-quick-actions button {
+  flex: 1;
+  background: rgba(54, 199, 255, 0.1);
+  border: 1px solid rgba(54, 199, 255, 0.2);
+  color: #36c7ff;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.collect-quick-actions button:hover {
+  background: rgba(54, 199, 255, 0.2);
+}
+
+.collect-summary {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.collect-summary h4 {
+  color: #8c9bb5;
+  font-size: 14px;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.collect-summary-row {
+  display: flex;
+  justify-content: space-between;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.collect-confirm {
+  width: 100%;
+  background: linear-gradient(135deg, #36c7ff 0%, #1a88ff 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.collect-confirm:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.collect-confirm:disabled {
+  background: #2a354d;
+  color: #6b7a99;
+  cursor: not-allowed;
 }

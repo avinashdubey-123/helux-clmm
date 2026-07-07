@@ -1,0 +1,471 @@
+.cf-page {
+  display: flex;
+  flex-direction: column;
+  padding: 112px 40px 72px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #e6f0ff;
+}
+
+.cf-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.cf-back-btn {
+  margin-bottom: 20px;
+  background: transparent;
+  border: 1px solid rgba(35, 50, 82, 0.95);
+  color: #e6f0ff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+}
+.cf-back-btn:hover {
+  background: rgba(255,255,255,0.05);
+}
+.cf-back-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.cf-back-btn:hover {
+  color: #e6f0ff;
+}
+
+.cf-main {
+  display: flex;
+  gap: 40px;
+}
+
+/* Stepper Sidebar */
+.cf-sidebar {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cf-stepper {
+  background: #0b1221;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.cf-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  transition: all 0.2s;
+}
+.cf-step.clickable {
+  cursor: pointer;
+}
+.cf-step.clickable:hover .cf-step-icon {
+  border-color: rgba(57, 208, 216, 0.5);
+}
+
+.cf-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 19px;
+  top: 45px;
+  bottom: -25px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cf-step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #7a8fa6;
+  z-index: 2;
+}
+
+.cf-step.active .cf-step-icon {
+  background: #39d0d8;
+  border-color: #39d0d8;
+  color: #fff;
+}
+
+.cf-step.completed .cf-step-icon {
+  background: #39d0d8;
+  border-color: #39d0d8;
+  color: #0b1221;
+}
+
+.cf-step-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.cf-step-title {
+  font-size: 14px;
+  color: #7a8fa6;
+  font-weight: 500;
+}
+
+.cf-step-desc {
+  font-size: 16px;
+  color: #e6f0ff;
+  font-weight: 600;
+}
+
+.cf-step:not(.active):not(.completed) .cf-step-desc {
+  color: #7a8fa6;
+}
+
+.cf-note-card {
+  background: #0b1221;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.cf-note-exclamation {
+  border: 1px solid #39d0d8;
+  color: #39d0d8;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 0;
+  padding-top: 2px;
+}
+.cf-note-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #39d0d8;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.cf-note-text {
+  color: #7a8fa6;
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-align: justify;
+}
+
+.cf-note-text.collapsed {
+  max-height: 100px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cf-note-text.collapsed::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, #0b1221);
+}
+
+.cf-note-text.expanded {
+  max-height: none;
+}
+
+.cf-note-show-more {
+  background: none;
+  border: none;
+  color: #39d0d8;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+  margin-top: 8px;
+  display: block;
+}
+
+/* Main Content */
+.cf-content {
+  flex: 1;
+}
+
+.cf-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cf-card {
+  background: rgba(14, 22, 39, 0.92);
+  border: 1px solid rgba(35, 50, 82, 0.95);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Step 1: Pool Selection */
+.cf-pool-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 295px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.cf-pool-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cf-pool-card:hover, .cf-pool-card.selected {
+  background: rgba(57, 208, 216, 0.05);
+  border-color: #39d0d8;
+}
+
+.cf-pool-icons {
+  display: flex;
+  align-items: center;
+}
+
+.cf-pool-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.cf-pool-icon:last-child {
+  margin-left: -8px;
+}
+
+.cf-pool-info {
+  flex: 1;
+  text-align: center;
+}
+
+.cf-pool-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.cf-pool-id {
+  font-size: 12px;
+  color: #7a8fa6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cf-pool-cyan {
+  color: #39d0d8;
+}
+
+.cf-copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+
+.cf-copy-check {
+  color: #39d0d8;
+  font-size: 12px;
+}
+
+.cf-copy-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+/* Step 2: Add Rewards */
+.cf-add-another {
+  background: transparent;
+  border: none;
+  color: #39d0d8;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cf-reward-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.cf-reward-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: #e6f0ff;
+}
+
+.cf-reward-delete {
+  background: transparent;
+  border: none;
+  color: #ff4d4d;
+  cursor: pointer;
+}
+
+.cf-input-group {
+  margin-bottom: 16px;
+}
+
+.cf-label {
+  display: block;
+  font-size: 12px;
+  color: #7a8fa6;
+  margin-bottom: 8px;
+}
+
+.cf-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+}
+
+.cf-input:focus {
+  border-color: #39d0d8;
+}
+
+.cf-dates-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.cf-dates-row > div {
+  flex: 1;
+}
+
+.cf-duration {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #e6f0ff;
+  white-space: nowrap;
+}
+
+/* Actions */
+.cf-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.cf-btn-back {
+  background: transparent;
+  border: 1px solid #39d0d8;
+  color: #39d0d8;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cf-btn-back:hover {
+  background: rgba(57, 208, 216, 0.1);
+}
+
+.cf-btn-next {
+  background: #39d0d8;
+  border: none;
+  color: #0b1221;
+  padding: 12px 40px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.cf-btn-next:hover {
+  opacity: 0.9;
+}
+
+.cf-btn-next:disabled {
+  background: #2a3b4c;
+  color: #7a8fa6;
+  cursor: not-allowed;
+}
+
+/* Step 3: Review */
+.cf-review-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cf-review-label {
+  color: #7a8fa6;
+}
+
+.cf-review-value {
+  font-weight: 600;
+  color: #e6f0ff;
+}
+
+.cf-pool-select-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+.cf-pool-select-wrap::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+.cf-pool-select-wrap::-webkit-scrollbar-thumb {
+  background: #39d0d8;
+  border-radius: 8px;
+}

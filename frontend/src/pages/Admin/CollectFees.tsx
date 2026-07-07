@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { PublicKey } from '@solana/web3.js'
@@ -11,9 +12,11 @@ import {
     ASSOCIATED_TOKEN_PROGRAM_ID 
 } from '@solana/spl-token'
 import useProgram from '../../utils/useProgram'
-import { getOperationAccountAddress } from '../../utils/pda'
-import TransactionCard from '../../components/TransactionCard/TransactionCard'
-import '../WithdrawForm/WithdrawForm.css'
+import { getShortTokenName } from '../../utils/token'
+import { useTransactions } from '../../contexts/TxContext'
+import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
+import { callWithRetry } from '../../utils/batchFetch'
+import './Admin.css'
 
 const toPublicKey = (value?: string | any | null) => {
     if (!value) return null
@@ -53,6 +56,7 @@ export default function CollectFees() {
     const wallet = useWallet()
     const { connection } = useConnection()
     const program = useProgram()
+    const { addTransaction } = useTransactions()
     
     const state = location.state as { pool: any; type: 'protocol' | 'fund'; fromTab?: string }
     const [percent, setPercent] = useState(100)
@@ -66,43 +70,54 @@ export default function CollectFees() {
         signature?: string
         details?: string | null
     } | null>(null)
+    const [collected, setCollected] = useState(false)
 
-    const poolPda = toPublicKey(state?.pool?.publicKey || state?.pool?.poolPda)
+    const poolPdaStr = state?.pool?.publicKey || state?.pool?.poolPda
+    const poolPda = useMemo(() => toPublicKey(poolPdaStr), [poolPdaStr])
     const type = state?.type || 'protocol'
 
-    const fetchPool = useCallback(async (isRetry = false) => {
+    const fetchPool = useCallback(async () => {
         if (!program || !poolPda) return
         
-        if (!isRetry) setFetching(true)
+        setFetching(true)
         try {
-            if (!isRetry) await new Promise(r => setTimeout(r, 400))
+            await new Promise(r => setTimeout(r, 400))
             
-            const data = await (program.account as any).poolState.fetch(poolPda)
-            setLocalPool(data)
-            if (txState?.status === 'error' && txState.title === 'Fetch Failed') {
-                setTxState(null)
-            }
-        } catch (err: any) {
+            const data = await callWithRetry(() => (program.account as any).poolState.fetch(poolPda)) as any
+            const p0 = data.protocolFeesToken0 ?? data.protocol_fees_token_0
+            const p1 = data.protocolFeesToken1 ?? data.protocol_fees_token_1
+            const f0 = data.fundFeesToken0 ?? data.fund_fees_token_0
+            const f1 = data.fundFeesToken1 ?? data.fund_fees_token_1
+            setLocalPool({
+                ...state.pool,
+                protocolFeesToken0: p0,
+                protocolFeesToken1: p1,
+                fundFeesToken0: f0,
+                fundFeesToken1: f1,
+                protocolFees0: p0,
+                protocolFees1: p1,
+                fundFees0: f0,
+                fundFees1: f1,
+            })
+        } catch (err) {
             console.error('Fetch pool error:', err)
-            if (err.message?.includes('429')) {
-                setTimeout(() => fetchPool(true), 2000)
-            }
         } finally {
-            if (!isRetry) setFetching(false)
+            setFetching(false)
         }
-    }, [program, poolPda?.toBase58()])
+    }, [program, poolPda])
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchPool()
     }, [fetchPool])
 
     if (!state || !state.pool || !poolPda) {
         return (
-            <div className="withdraw-page">
-                <div className="withdraw-card">
+            <div className="collect-page">
+                <div className="collect-card">
                     <h2>Error</h2>
                     <p>No pool selected for fee collection.</p>
-                    <button className="withdraw-confirm" style={{ marginTop: '20px' }} onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab } })}>Back to Admin</button>
+                    <button className="collect-confirm" style={{ marginTop: '20px' }} onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab } })}>Back to Admin</button>
                 </div>
             </div>
         )
@@ -118,6 +133,11 @@ export default function CollectFees() {
 
     const dec0 = pool.mint0Decimals || 6
     const dec1 = pool.mint1Decimals || 6
+
+    const amount0Available = Number(fees0.toString()) / Math.pow(10, dec0)
+    const amount1Available = Number(fees1.toString()) / Math.pow(10, dec1)
+    const t0Name = pool.token0Mint ? getShortTokenName(pool.token0Mint.toString()) : 'TOKEN0'
+    const t1Name = pool.token1Mint ? getShortTokenName(pool.token1Mint.toString()) : 'TOKEN1'
 
     const onConfirmCollection = async () => {
         if (!program || !wallet.publicKey || !pool) return
@@ -142,7 +162,6 @@ export default function CollectFees() {
             const recipient0 = getAssociatedTokenAddressSync(token0Mint, wallet.publicKey, false, token0Program)
             const recipient1 = getAssociatedTokenAddressSync(token1Mint, wallet.publicKey, false, token1Program)
 
-            const [authority] = getOperationAccountAddress(program.programId)
             const method = type === 'protocol' ? (program.methods as any).collectProtocolFee : (program.methods as any).collectFundFee
             
             const tx = new anchor.web3.Transaction()
@@ -168,15 +187,14 @@ export default function CollectFees() {
             const ix = await method(amount0, amount1)
                 .accounts({
                     owner: wallet.publicKey,
-                    authority,
                     poolState: poolPda,
                     ammConfig: new PublicKey(pool.ammConfig.toString()),
-                    token0Vault: new PublicKey(pool.token0Vault.toString()),
-                    token1Vault: new PublicKey(pool.token1Vault.toString()),
+                    tokenVault0: new PublicKey(pool.token0Vault.toString()),
+                    tokenVault1: new PublicKey(pool.token1Vault.toString()),
                     vault0Mint: token0Mint,
                     vault1Mint: token1Mint,
-                    recipientToken0Account: recipient0,
-                    recipientToken1Account: recipient1,
+                    recipientTokenAccount0: recipient0,
+                    recipientTokenAccount1: recipient1,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     tokenProgram2022: TOKEN_2022_PROGRAM_ID,
                 })
@@ -197,10 +215,12 @@ export default function CollectFees() {
 
             setTxState({
                 status: 'success',
-                title: 'Collection Successful',
-                message: `Tx: ${sig.slice(0, 8)}...`,
+                title: 'Success',
+                message: 'Fees collected successfully',
                 signature: sig
             })
+            setCollected(true)
+            addTransaction(sig, `Collected ${type} fees for ${t0Name}-${t1Name}`, 'Admin Action')
         } catch (err: any) {
             setTxState({
                 status: 'error',
@@ -213,88 +233,98 @@ export default function CollectFees() {
         }
     }
 
+    const formatAmount = (val: number) => val.toLocaleString(undefined, { maximumFractionDigits: 6 })
+    
+    const amount0ToCollect = amount0Available * percent / 100
+    const amount1ToCollect = amount1Available * percent / 100
+
     return (
-        <div className="withdraw-page">
-            <div className="withdraw-card">
-                <div className="withdraw-header">
-                    <button className="withdraw-close" onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab } })}>x</button>
+        <div className="portfolio-modal-overlay">
+            <div className="portfolio-modal-backdrop" onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab, refetchPools: collected } })} />
+            <div className="portfolio-modal-content withdraw-overlay">
+                <button className="portfolio-modal-close" onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab, refetchPools: collected } })}>✕</button>
+                <div className="portfolio-modal-header">
                     <h2>Collect {type === 'protocol' ? 'Protocol' : 'Fund'} Fees</h2>
-                    <p>Pool: {poolPda.toBase58().slice(0, 12)}...</p>
+                    <p className="modal-withdraw-subtitle">Pool: {poolPda.toBase58().slice(0, 12)}...</p>
                 </div>
-
-                <div className="withdraw-token-box">
-                    <div className="withdraw-token-row">
-                        <span className="withdraw-token-label">Token 0</span>
-                        <div className="withdraw-token-values">
-                            <strong>{fetching ? '...' : (Number(fees0.toString()) * percent / 100 / Math.pow(10, dec0)).toFixed(6)}</strong>
-                            <small>{fetching ? 'Refreshing...' : `Available: ${(Number(fees0.toString()) / Math.pow(10, dec0)).toFixed(6)}`}</small>
+                
+                <div className="portfolio-modal-body">
+                    <div className="withdraw-slider-container">
+                        <div className="withdraw-slider-header">
+                            <span>Percentage</span>
+                            <span className="modal-withdraw-pct">{Math.round(percent)}%</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            step="1"
+                            value={percent} 
+                            onChange={(e) => setPercent(Number(e.target.value))}
+                            className="withdraw-slider"
+                            style={{ background: `linear-gradient(to right, #39d0d8 ${percent}%, #1a2640 ${percent}%)` }}
+                        />
+                        <div className="withdraw-slider-marks">
+                            <span onClick={() => setPercent(0)}>0%</span>
+                            <span onClick={() => setPercent(25)}>25%</span>
+                            <span onClick={() => setPercent(50)}>50%</span>
+                            <span onClick={() => setPercent(75)}>75%</span>
+                            <span onClick={() => setPercent(100)}>100%</span>
                         </div>
                     </div>
-                    <div className="withdraw-token-row">
-                        <span className="withdraw-token-label">Token 1</span>
-                        <div className="withdraw-token-values">
-                            <strong>{fetching ? '...' : (Number(fees1.toString()) * percent / 100 / Math.pow(10, dec1)).toFixed(6)}</strong>
-                            <small>{fetching ? 'Refreshing...' : `Available: ${(Number(fees1.toString()) / Math.pow(10, dec1)).toFixed(6)}`}</small>
+
+                    <div className="deposit-token-card modal-deposit-total">
+                        <div className="deposit-token-top modal-token-top-between">
+                            <strong>{t0Name}</strong>
+                        </div>
+                        <div className="deposit-token-row" style={{ padding: '8px 0' }}>
+                            <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#e6f0ff' }}>
+                                {fetching ? '...' : formatAmount(amount0ToCollect)}
+                            </span>
                         </div>
                     </div>
-                </div>
 
-                <div className="withdraw-amount-section">
-                    <div className="withdraw-amount-top">
-                        <span>Percentage</span>
-                        <strong>{percent}%</strong>
+                    <div className="deposit-plus modal-deposit-plus">+</div>
+
+                    <div className="deposit-token-card modal-deposit-total">
+                        <div className="deposit-token-top modal-token-top-between">
+                            <strong>{t1Name}</strong>
+                        </div>
+                        <div className="deposit-token-row" style={{ padding: '8px 0' }}>
+                            <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#e6f0ff' }}>
+                                {fetching ? '...' : formatAmount(amount1ToCollect)}
+                            </span>
+                        </div>
                     </div>
-                    <input 
-                        type="range" 
-                        className="withdraw-slider"
-                        min="0" max="100" 
-                        value={percent} 
-                        onChange={(e) => setPercent(Number(e.target.value))}
-                        style={{
-                            background: `linear-gradient(to right, #36c7ff 0%, #36c7ff ${percent}%, #1d2a47 ${percent}%, #1d2a47 100%)`
-                        }}
-                    />
-                    <div className="withdraw-quick-actions">
-                        <button type="button" onClick={() => setPercent(25)}>25%</button>
-                        <button type="button" onClick={() => setPercent(50)}>50%</button>
-                        <button type="button" onClick={() => setPercent(75)}>75%</button>
-                        <button type="button" onClick={() => setPercent(100)}>100%</button>
+
+                    <div className="modal-withdraw-amounts-card" style={{ marginTop: '24px' }}>
+                        <h3 className="modal-withdraw-amounts-title">Collection Summary</h3>
+                        <div className="modal-withdraw-amounts-row last">
+                            <span>Target</span>
+                            <strong>{type === 'protocol' ? 'Protocol Treasury' : 'Fund Manager'}</strong>
+                        </div>
                     </div>
+
+                    {txState && (
+                        <TxSmallCard
+                            status={txState.status}
+                            title={txState.title}
+                            description={txState.message}
+                            details={txState.details ?? undefined}
+                            signature={txState.signature ?? null}
+                            onClose={() => setTxState(null)}
+                        />
+                    )}
+
+                    <button 
+                        className="portfolio-btn modal-submit-btn" 
+                        style={{ marginTop: '24px' }}
+                        onClick={onConfirmCollection} 
+                        disabled={busy || fetching || (fees0.isZero() && fees1.isZero())}
+                    >
+                        {busy ? <span className="loader-dots">Processing...</span> : (fees0.isZero() && fees1.isZero() ? 'No Fees Available' : 'Confirm Collection')}
+                    </button>
                 </div>
-
-                <div className="withdraw-summary">
-                    <h4>Collection Summary</h4>
-                    <div className="withdraw-summary-row">
-                        <span>Target</span>
-                        <span>{type === 'protocol' ? 'Protocol Treasury' : 'Fund Manager'}</span>
-                    </div>
-                </div>
-
-                {txState && (
-                    <TransactionCard
-                        status={txState.status}
-                        title={txState.title}
-                        message={txState.message}
-                        signature={txState.signature}
-                        explorerUrl={txState.signature ? `https://explorer.solana.com/tx/${txState.signature}?cluster=devnet` : undefined}
-                        details={txState.details}
-                        onClose={() => {
-                            if (txState.status === 'success') {
-                                setTxState(null)
-                            } else {
-                                setTxState(null)
-                            }
-                        }}
-                    />
-                )}
-
-                <button 
-                    className="withdraw-confirm" 
-                    onClick={onConfirmCollection} 
-                    disabled={busy || fetching || (fees0.isZero() && fees1.isZero())}
-                >
-                    {busy ? 'Processing...' : (fees0.isZero() && fees1.isZero() ? 'No Fees Available' : 'Confirm Collection')}
-                </button>
             </div>
         </div>
     )

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import { createContext, useContext, useState, ReactNode } from 'react'
 import TxSmallCard from '../components/TxSmallCard/TxSmallCard'
 
 export interface TransactionRecord {
@@ -10,7 +10,7 @@ export interface TransactionRecord {
 
 interface TxContextType {
   transactions: TransactionRecord[]
-  addTransaction: (signature: string | null, description: string, title?: string) => void
+  addTransaction: (signature: string | null, description: string, title?: string, suppressToast?: boolean) => void
 }
 
 const TxContext = createContext<TxContextType>({
@@ -22,26 +22,22 @@ export function TxProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<TransactionRecord[]>([])
   const [latestTx, setLatestTx] = useState<TransactionRecord | null>(null)
 
-  const addTransaction = (signature: string | null, description: string, title?: string) => {
+  const addTransaction = (signature: string | null, description: string, title?: string, suppressToast?: boolean) => {
     const tx = { signature, description, timestamp: Date.now(), title }
     setTransactions((prev) => [tx, ...prev])
-    setLatestTx(tx)
+    if (!suppressToast) {
+      setLatestTx(tx)
+    }
   }
 
-  useEffect(() => {
-    if (latestTx) {
-      const timer = setTimeout(() => {
-        setLatestTx(null)
-      }, 10000)
-      return () => clearTimeout(timer)
-    }
-  }, [latestTx])
+
 
   return (
     <TxContext.Provider value={{ transactions, addTransaction }}>
       {children}
       {latestTx && (
         <TxSmallCard 
+          status="success"
           title={latestTx.title || "Transaction Submitted"} 
           description={latestTx.description} 
           signature={latestTx.signature} 

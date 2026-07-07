@@ -8,6 +8,14 @@ export type PositionRowData = {
   liquidity: string
   feeGrowthInside0Last: string
   feeGrowthInside1Last: string
+  tokenFeesOwed0: string
+  tokenFeesOwed1: string
+  rewardInfos: {
+    growthInsideLastX64: string
+    rewardAmountOwed: string
+  }[]
+  lowerTickOutsideGrowthX64?: string[]
+  upperTickOutsideGrowthX64?: string[]
 }
 
 import { usePositionsContext } from '../contexts/PositionsContext'
