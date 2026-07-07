@@ -13,6 +13,7 @@ import './Admin.css'
 import { getShortTokenName, getPoolDisplayName } from '../../utils/token'
 import { useTransactions } from '../../contexts/TxContext'
 
+
 const ADMIN_ID = new PublicKey('wE2EtwuovRxvXZoThsXhRTuCrFdAA1jTbLnJp9nfezL')
 const DEFAULT_PUBKEY = '11111111111111111111111111111111'
 
@@ -154,6 +155,7 @@ const Admin = () => {
   const wallet = useWallet()
   const { connection } = useConnection()
   const { addTransaction } = useTransactions()
+
   const navigate = useNavigate()
   const location = useLocation()
   const [activeTab, setActiveTabState] = useState<'config' | 'operation' | 'token2022' | 'pools' | 'fees'>(() => {
@@ -165,7 +167,7 @@ const Admin = () => {
     setActiveTabState(tab)
   }
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [errorState, setErrorState] = useState<{ title?: string; message: string; details?: string } | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [txResult, setTxResult] = useState<{ sig: string; explorer: string } | null>(null)
@@ -233,7 +235,7 @@ const Admin = () => {
       const mappedConfigs = loadedConfigs.map((c: any) => ({ ...c.account, publicKey: c.publicKey }))
       setConfigs(mappedConfigs)
       cachedConfigs = mappedConfigs
-      
+
       // Fetch approved support mints if namespace exists
       const supportMintNamespace = (program.account as any).supportMintAssociated
       if (supportMintNamespace && typeof supportMintNamespace.all === 'function') {
@@ -256,7 +258,7 @@ const Admin = () => {
 
     } catch (err: any) {
       console.error('Fetch error:', err)
-      setError(err.message || 'Failed to fetch admin data')
+      setErrorState({ message: 'Failed to fetch admin data', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -292,7 +294,7 @@ const Admin = () => {
       }
       refetchPools()
       // Clear the flag so it doesn't refetch again on re-render
-      window.history.replaceState({...navState, refetchPools: false}, '')
+      window.history.replaceState({ ...navState, refetchPools: false }, '')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, program])
@@ -319,7 +321,7 @@ const Admin = () => {
     if (!program || !wallet.publicKey) return
 
     setLoading(true)
-    setError(null)
+    setErrorState(null)
     setSuccess(null)
     try {
       const [operationState] = getOperationAccountAddress(program.programId)
@@ -335,10 +337,10 @@ const Admin = () => {
       await connection.confirmTransaction(sig, 'confirmed')
       setTxResult({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` })
       setSuccess('Operation account created successfully')
-      addTransaction(sig, 'Operation account created successfully', 'Admin Action')
+      addTransaction(sig, 'Operation account created successfully', 'Admin Action', true)
       await getOperationState()
     } catch (err: any) {
-      setError(err.message || 'Failed to create operation account')
+      setErrorState({ message: 'Failed to create operation account', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -351,12 +353,12 @@ const Admin = () => {
       const keys = parsePubkeyList(rawInput)
 
       if (keys.length === 0) {
-        setError('Enter at least one address')
+        setErrorState({ message: 'Enter at least one address' })
         return
       }
 
       setLoading(true)
-      setError(null)
+      setErrorState(null)
       setSuccess(null)
 
       const [operationState] = getOperationAccountAddress(program.programId)
@@ -372,11 +374,11 @@ const Admin = () => {
       await connection.confirmTransaction(sig, 'confirmed')
       setTxResult({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` })
       setSuccess(successMessage)
-      addTransaction(sig, successMessage, 'Admin Action')
+      addTransaction(sig, successMessage, 'Admin Action', true)
       clearInput()
       await getOperationState()
     } catch (err: any) {
-      setError(err.message || 'Failed to update operation account')
+      setErrorState({ message: 'Failed to update operation account', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -385,7 +387,7 @@ const Admin = () => {
   const handleCreateConfig = async () => {
     if (!program || !wallet.publicKey) return
     setLoading(true)
-    setError(null)
+    setErrorState(null)
     setSuccess(null)
     try {
       const index = parseInt(configIndex)
@@ -410,10 +412,10 @@ const Admin = () => {
       await connection.confirmTransaction(sig, 'confirmed')
       setTxResult({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` })
       setSuccess(`Config ${index} created successfully`)
-      addTransaction(sig, `Config ${index} created successfully`, 'Admin Action')
+      addTransaction(sig, `Config ${index} created successfully`, 'Admin Action', true)
       fetchData()
     } catch (err: any) {
-      setError(err.message || 'Failed to create config')
+      setErrorState({ message: 'Failed to create config', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -426,7 +428,7 @@ const Admin = () => {
     const updateValue = updateValues[addrStr] ?? ''
 
     setLoading(true)
-    setError(null)
+    setErrorState(null)
     setSuccess(null)
     try {
       const paramNum = parseInt(updateParam)
@@ -456,11 +458,11 @@ const Admin = () => {
       await connection.confirmTransaction(sig, 'confirmed')
       setTxResult({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` })
       setSuccess(`Amm Config updated successfully`)
-      addTransaction(sig, `Amm Config updated successfully`, 'Admin Action')
+      addTransaction(sig, `Amm Config updated successfully`, 'Admin Action', true)
       setUpdateValues(prev => ({ ...prev, [addrStr]: '' }))
       fetchData()
     } catch (err: any) {
-      setError(err.message || 'Failed to update config')
+      setErrorState({ message: 'Failed to update config', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -469,12 +471,12 @@ const Admin = () => {
   const handleCreateSupportMintAssociated = async () => {
     if (!program || !wallet.publicKey) return
     if (!supportMint) {
-      setError('Enter a token-2022 mint address first')
+      setErrorState({ message: 'Enter a token-2022 mint address first' })
       return
     }
 
     setLoading(true)
-    setError(null)
+    setErrorState(null)
     setSuccess(null)
     try {
       const mint = new PublicKey(supportMint)
@@ -493,11 +495,11 @@ const Admin = () => {
       await connection.confirmTransaction(sig, 'confirmed')
       setTxResult({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` })
       setSuccess('Support mint approved successfully')
-      addTransaction(sig, 'Support mint approved successfully', 'Admin Action')
+      addTransaction(sig, 'Support mint approved successfully', 'Admin Action', true)
       setSupportMint('')
       fetchData()
     } catch (err: any) {
-      setError(err.message || 'Failed to approve support mint')
+      setErrorState({ message: 'Failed to approve support mint', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -512,7 +514,7 @@ const Admin = () => {
       }, 1200)
     } catch (err) {
       console.error('Failed to copy mint address:', err)
-      setError('Failed to copy mint address')
+      setErrorState({ message: 'Failed to copy mint address' })
     }
   }
 
@@ -541,7 +543,7 @@ const Admin = () => {
     const poolAddr = pool.publicKey.toBase58()
     const status = poolStatusChanges[poolAddr] ?? pool.status
     setLoading(true)
-    setError(null)
+    setErrorState(null)
     setSuccess(null)
     try {
       const sig = await (program.methods as any)
@@ -555,7 +557,7 @@ const Admin = () => {
       await connection.confirmTransaction(sig, 'confirmed')
       setTxResult({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` })
       setSuccess(`Pool ${poolAddr} status updated to ${status}`)
-      addTransaction(sig, `Pool status updated to ${status}`, 'Admin Action')
+      addTransaction(sig, `Pool ${poolAddr} status updated to ${status}`, 'Admin Action', true)
       fetchData()
 
       setPoolStatusChanges(prev => {
@@ -569,7 +571,7 @@ const Admin = () => {
         return next
       })
     } catch (err: any) {
-      setError(err.message || 'Failed to update pool status')
+      setErrorState({ message: 'Failed to update pool status', details: err.message || err.toString() })
     } finally {
       setLoading(false)
     }
@@ -608,14 +610,15 @@ const Admin = () => {
         <button className={`admin-tab ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => setActiveTab('fees')}>Fees</button>
       </div>
 
-      {(error || status) && !txResult && (
+      {(errorState || status) && !txResult && (
         <TxSmallCard
-          status={error ? 'error' : 'info'}
-          title={error ? 'Error' : 'Status'}
-          description={error || status || ''}
+          status={errorState ? 'error' : 'info'}
+          title={errorState?.title || (errorState ? 'Error' : 'Status')}
+          description={errorState?.message || status || ''}
+          details={errorState?.details}
           signature={null}
           onClose={() => {
-            setError(null)
+            setErrorState(null)
             setStatus(null)
           }}
         />

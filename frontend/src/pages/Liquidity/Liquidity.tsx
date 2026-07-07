@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Liquidity.css";
 import copyIcon from "../../assets/copy.svg";
+import swapIcon from "../../assets/swap.svg";
 import { usePools, PoolRowData } from "../../contexts/PoolsContext";
 import Loader from "../../components/Loader/Loader";
 import InlineLoader from "../../components/InlineLoader/InlineLoader";
@@ -195,7 +196,7 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
           <div className="lp-swap-tooltip-wrapper">
             <button className="lp-swap-btn" onClick={onSwap} title="Swap">
               <img
-                src="/src/assets/swap.svg"
+                src={swapIcon}
                 alt="Swap"
                 style={{ width: "16px", height: "16px" }}
               />

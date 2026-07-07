@@ -4,12 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { PublicKey } from '@solana/web3.js'
 import * as anchor from '@coral-xyz/anchor'
-import { 
-    getAssociatedTokenAddressSync, 
-    TOKEN_PROGRAM_ID, 
-    TOKEN_2022_PROGRAM_ID, 
+import {
+    getAssociatedTokenAddressSync,
+    TOKEN_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID,
     createAssociatedTokenAccountIdempotentInstruction,
-    ASSOCIATED_TOKEN_PROGRAM_ID 
+    ASSOCIATED_TOKEN_PROGRAM_ID
 } from '@solana/spl-token'
 import useProgram from '../../utils/useProgram'
 import { getShortTokenName } from '../../utils/token'
@@ -57,7 +57,7 @@ export default function CollectFees() {
     const { connection } = useConnection()
     const program = useProgram()
     const { addTransaction } = useTransactions()
-    
+
     const state = location.state as { pool: any; type: 'protocol' | 'fund'; fromTab?: string }
     const [percent, setPercent] = useState(100)
     const [busy, setBusy] = useState(false)
@@ -78,11 +78,11 @@ export default function CollectFees() {
 
     const fetchPool = useCallback(async () => {
         if (!program || !poolPda) return
-        
+
         setFetching(true)
         try {
             await new Promise(r => setTimeout(r, 400))
-            
+
             const data = await callWithRetry(() => (program.account as any).poolState.fetch(poolPda)) as any
             const p0 = data.protocolFeesToken0 ?? data.protocol_fees_token_0
             const p1 = data.protocolFeesToken1 ?? data.protocol_fees_token_1
@@ -124,11 +124,11 @@ export default function CollectFees() {
     }
 
     const pool = localPool || state.pool
-    const fees0 = type === 'protocol' 
-        ? getBNValue(pool.protocolFeesToken0 || pool.protocolFees0) 
+    const fees0 = type === 'protocol'
+        ? getBNValue(pool.protocolFeesToken0 || pool.protocolFees0)
         : getBNValue(pool.fundFeesToken0 || pool.fundFees0)
-    const fees1 = type === 'protocol' 
-        ? getBNValue(pool.protocolFeesToken1 || pool.protocolFees1) 
+    const fees1 = type === 'protocol'
+        ? getBNValue(pool.protocolFeesToken1 || pool.protocolFees1)
         : getBNValue(pool.fundFeesToken1 || pool.fundFees1)
 
     const dec0 = pool.mint0Decimals || 6
@@ -141,7 +141,7 @@ export default function CollectFees() {
 
     const onConfirmCollection = async () => {
         if (!program || !wallet.publicKey || !pool) return
-        
+
         const amount0 = fees0.mul(new anchor.BN(percent)).div(new anchor.BN(100))
         const amount1 = fees1.mul(new anchor.BN(percent)).div(new anchor.BN(100))
 
@@ -156,16 +156,21 @@ export default function CollectFees() {
         try {
             const token0Mint = new PublicKey(pool.token0Mint.toString())
             const token1Mint = new PublicKey(pool.token1Mint.toString())
-            const token0Program = new PublicKey(pool.token0Program.toString())
-            const token1Program = new PublicKey(pool.token1Program.toString())
-            
+
+            let token0Program = TOKEN_PROGRAM_ID
+            let token1Program = TOKEN_PROGRAM_ID
+            const m0Account = await connection.getAccountInfo(token0Mint)
+            const m1Account = await connection.getAccountInfo(token1Mint)
+            if (m0Account) token0Program = m0Account.owner
+            if (m1Account) token1Program = m1Account.owner
+
             const recipient0 = getAssociatedTokenAddressSync(token0Mint, wallet.publicKey, false, token0Program)
             const recipient1 = getAssociatedTokenAddressSync(token1Mint, wallet.publicKey, false, token1Program)
 
             const method = type === 'protocol' ? (program.methods as any).collectProtocolFee : (program.methods as any).collectFundFee
-            
+
             const tx = new anchor.web3.Transaction()
-            
+
             tx.add(createAssociatedTokenAccountIdempotentInstruction(
                 wallet.publicKey,
                 recipient0,
@@ -174,7 +179,7 @@ export default function CollectFees() {
                 token0Program,
                 ASSOCIATED_TOKEN_PROGRAM_ID
             ))
-            
+
             tx.add(createAssociatedTokenAccountIdempotentInstruction(
                 wallet.publicKey,
                 recipient1,
@@ -199,18 +204,18 @@ export default function CollectFees() {
                     tokenProgram2022: TOKEN_2022_PROGRAM_ID,
                 })
                 .instruction()
-            
+
             tx.add(ix)
-            
+
             setTxState({ status: 'info', title: 'Signing', message: 'Please confirm in your wallet' })
-            
+
             const { blockhash } = await connection.getLatestBlockhash()
             tx.recentBlockhash = blockhash
             tx.feePayer = wallet.publicKey
 
             const sig = await wallet.sendTransaction(tx, connection)
             await connection.confirmTransaction(sig, 'confirmed')
-            
+
             fetchPool()
 
             setTxState({
@@ -234,7 +239,7 @@ export default function CollectFees() {
     }
 
     const formatAmount = (val: number) => val.toLocaleString(undefined, { maximumFractionDigits: 6 })
-    
+
     const amount0ToCollect = amount0Available * percent / 100
     const amount1ToCollect = amount1Available * percent / 100
 
@@ -247,19 +252,19 @@ export default function CollectFees() {
                     <h2>Collect {type === 'protocol' ? 'Protocol' : 'Fund'} Fees</h2>
                     <p className="modal-withdraw-subtitle">Pool: {poolPda.toBase58().slice(0, 12)}...</p>
                 </div>
-                
+
                 <div className="portfolio-modal-body">
                     <div className="withdraw-slider-container">
                         <div className="withdraw-slider-header">
                             <span>Percentage</span>
                             <span className="modal-withdraw-pct">{Math.round(percent)}%</span>
                         </div>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
                             step="1"
-                            value={percent} 
+                            value={percent}
                             onChange={(e) => setPercent(Number(e.target.value))}
                             className="withdraw-slider"
                             style={{ background: `linear-gradient(to right, #39d0d8 ${percent}%, #1a2640 ${percent}%)` }}
@@ -316,10 +321,10 @@ export default function CollectFees() {
                         />
                     )}
 
-                    <button 
-                        className="portfolio-btn modal-submit-btn" 
+                    <button
+                        className="portfolio-btn modal-submit-btn"
                         style={{ marginTop: '24px' }}
-                        onClick={onConfirmCollection} 
+                        onClick={onConfirmCollection}
                         disabled={busy || fetching || (fees0.isZero() && fees1.isZero())}
                     >
                         {busy ? <span className="loader-dots">Processing...</span> : (fees0.isZero() && fees1.isZero() ? 'No Fees Available' : 'Confirm Collection')}
