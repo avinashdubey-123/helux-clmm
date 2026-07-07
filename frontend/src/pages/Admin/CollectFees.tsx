@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
-import { PublicKey } from '@solana/web3.js'
+import { PublicKey, ComputeBudgetProgram } from '@solana/web3.js'
 import * as anchor from '@coral-xyz/anchor'
 import {
     getAssociatedTokenAddressSync,
@@ -169,9 +169,12 @@ export default function CollectFees() {
 
             const method = type === 'protocol' ? (program.methods as any).collectProtocolFee : (program.methods as any).collectFundFee
 
-            const tx = new anchor.web3.Transaction()
+            const instructions = []
+            instructions.push(ComputeBudgetProgram.setComputeUnitLimit({ units: 600000 }))
+            // Optional: Set a baseline priority fee for better inclusion chances
+            instructions.push(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 5000 }))
 
-            tx.add(createAssociatedTokenAccountIdempotentInstruction(
+            instructions.push(createAssociatedTokenAccountIdempotentInstruction(
                 wallet.publicKey,
                 recipient0,
                 wallet.publicKey,
@@ -180,7 +183,7 @@ export default function CollectFees() {
                 ASSOCIATED_TOKEN_PROGRAM_ID
             ))
 
-            tx.add(createAssociatedTokenAccountIdempotentInstruction(
+            instructions.push(createAssociatedTokenAccountIdempotentInstruction(
                 wallet.publicKey,
                 recipient1,
                 wallet.publicKey,
@@ -205,16 +208,40 @@ export default function CollectFees() {
                 })
                 .instruction()
 
-            tx.add(ix)
+            instructions.push(ix)
 
             setTxState({ status: 'info', title: 'Signing', message: 'Please confirm in your wallet' })
 
-            const { blockhash } = await connection.getLatestBlockhash()
-            tx.recentBlockhash = blockhash
-            tx.feePayer = wallet.publicKey
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
 
-            const sig = await wallet.sendTransaction(tx, connection)
-            await connection.confirmTransaction(sig, 'confirmed')
+            const messageV0 = new anchor.web3.TransactionMessage({
+                payerKey: wallet.publicKey,
+                recentBlockhash: blockhash,
+                instructions,
+            }).compileToV0Message()
+
+            const versionedTx = new anchor.web3.VersionedTransaction(messageV0)
+
+            if (!wallet.signTransaction) {
+                throw new Error("Wallet does not support manual signing.")
+            }
+
+            const signedTx = await wallet.signTransaction(versionedTx)
+            setTxState({ status: 'info', title: 'Sending', message: 'Broadcasting to network...' })
+
+            const sig = await connection.sendRawTransaction(signedTx.serialize(), { skipPreflight: false })
+
+            setTxState({ status: 'info', title: 'Confirming', message: 'Waiting for network confirmation...' })
+
+            const confirmation = await connection.confirmTransaction({
+                signature: sig,
+                blockhash,
+                lastValidBlockHeight
+            }, 'confirmed')
+
+            if (confirmation.value.err) {
+                throw new Error(`Transaction failed: ${confirmation.value.err}`)
+            }
 
             fetchPool()
 
@@ -227,11 +254,18 @@ export default function CollectFees() {
             setCollected(true)
             addTransaction(sig, `Collected ${type} fees for ${t0Name}-${t1Name}`, 'Admin Action')
         } catch (err: any) {
+            console.error('Fee collection error:', err)
+            let details = err.message || String(err)
+            if (err.logs && Array.isArray(err.logs)) {
+                details += '\n\nLogs:\n' + err.logs.join('\n')
+            } else if (err.simulationResponse?.logs) {
+                details += '\n\nLogs:\n' + err.simulationResponse.logs.join('\n')
+            }
             setTxState({
                 status: 'error',
                 title: 'Collection Failed',
                 message: 'Transaction failed',
-                details: err.message || String(err)
+                details
             })
         } finally {
             setBusy(false)

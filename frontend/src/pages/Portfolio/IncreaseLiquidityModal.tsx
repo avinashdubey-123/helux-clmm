@@ -51,7 +51,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
   const [balance0, setBalance0] = useState(0)
   const [balance1, setBalance1] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [txState, setTxState] = useState<{status: 'error', title: string, message: string, details?: string} | null>(null)
+  const [txState, setTxState] = useState<{ status: 'error', title: string, message: string, details?: string } | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const calcRequestIdRef = useRef<number>(0)
   const calcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -80,11 +80,11 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       try {
         const resp0 = await connection.getParsedAccountInfo(mint0)
         if (resp0?.value?.owner) programId0 = resp0.value.owner
-      } catch (e) {}
+      } catch (e) { }
       try {
         const resp1 = await connection.getParsedAccountInfo(mint1)
         if (resp1?.value?.owner) programId1 = resp1.value.owner
-      } catch (e) {}
+      } catch (e) { }
 
       const ata0 = getAssociatedTokenAddressSync(mint0, publicKey, false, programId0, ASSOCIATED_TOKEN_PROGRAM_ID)
       const ata1 = getAssociatedTokenAddressSync(mint1, publicKey, false, programId1, ASSOCIATED_TOKEN_PROGRAM_ID)
@@ -92,7 +92,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       getTokenBalance(connection, ata0).then(b => setBalance0(b / Math.pow(10, pool.mintDecimals0))).catch(() => setBalance0(0))
       getTokenBalance(connection, ata1).then(b => setBalance1(b / Math.pow(10, pool.mintDecimals1))).catch(() => setBalance1(0))
     }
-    
+
     getBalances()
   }, [publicKey, connection, pool])
 
@@ -113,8 +113,8 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       return
     }
 
-    const activeAmountChanged = activeField === 'amount0' 
-      ? amount0 !== prevCalcStateRef.current.amount0 
+    const activeAmountChanged = activeField === 'amount0'
+      ? amount0 !== prevCalcStateRef.current.amount0
       : amount1 !== prevCalcStateRef.current.amount1;
 
     if (!activeAmountChanged) {
@@ -128,7 +128,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
     calcTimeoutRef.current = setTimeout(async () => {
       const currentRequestId = ++calcRequestIdRef.current;
       setIsCalculating(true);
-      
+
       try {
         let freshTick = currentTick;
         if (pool.poolPda && program) {
@@ -139,7 +139,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
             freshTick = rawTick;
           }
         }
-        
+
         if (calcRequestIdRef.current !== currentRequestId) return;
 
         const sqrtP = Math.pow(1.0001, freshTick / 2)
@@ -188,7 +188,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
   const depositRatio = useMemo(() => {
     if (depositMode === 'token0Only') return `100% ${t0Name} / 0% ${t1Name}`
     if (depositMode === 'token1Only') return `0% ${t0Name} / 100% ${t1Name}`
-    
+
     const sqrtP = Math.pow(1.0001, currentTick / 2)
     const sqrtPL = Math.pow(1.0001, position.tickLower / 2)
     const sqrtPU = Math.pow(1.0001, position.tickUpper / 2)
@@ -211,7 +211,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       const pct0 = Math.round((value0 / totalValue) * 100)
       return `${pct0}% ${t0Name} / ${100 - pct0}% ${t1Name}`
     }
-    
+
     return `0% ${t0Name} / 0% ${t1Name}`
   }, [depositMode, currentTick, position.tickLower, position.tickUpper, pool.mintDecimals0, pool.mintDecimals1, currentPrice, t0Name, t1Name])
 
@@ -261,11 +261,11 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       try {
         const resp0 = await connection.getParsedAccountInfo(tokenMint0)
         if (resp0?.value?.owner) tokenProgram0Id = resp0.value.owner
-      } catch (e) {}
+      } catch (e) { }
       try {
         const resp1 = await connection.getParsedAccountInfo(tokenMint1)
         if (resp1?.value?.owner) tokenProgram1Id = resp1.value.owner
-      } catch (e) {}
+      } catch (e) { }
 
       const tokenAccount0 = getAssociatedTokenAddressSync(tokenMint0, publicKey, false, tokenProgram0Id, ASSOCIATED_TOKEN_PROGRAM_ID)
       const tokenAccount1 = getAssociatedTokenAddressSync(tokenMint1, publicKey, false, tokenProgram1Id, ASSOCIATED_TOKEN_PROGRAM_ID)
@@ -306,11 +306,11 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
           try {
             const resp = await connection.getParsedAccountInfo(rewardMintKey);
             if (resp?.value?.owner) tokenProgramId = resp.value.owner;
-          } catch (e) {}
+          } catch (e) { }
 
           const rewardVault = getPoolRewardVaultAddress(poolPda, rewardMintKey, program.programId)[0];
           const userRewardAccount = getAssociatedTokenAddressSync(rewardMintKey, publicKey, false, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
-          
+
           remainingAccounts.push({ pubkey: rewardVault, isWritable: true, isSigner: false });
           remainingAccounts.push({ pubkey: userRewardAccount, isWritable: true, isSigner: false });
           remainingAccounts.push({ pubkey: rewardMintKey, isWritable: false, isSigner: false });
@@ -343,9 +343,9 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       console.error(err)
       let details = err.message || '';
       if (err.logs && Array.isArray(err.logs)) {
-         details += '\n\nLogs:\n' + err.logs.join('\n');
+        details += '\n\nLogs:\n' + err.logs.join('\n');
       } else if (err.stack) {
-         details += '\n\n' + err.stack;
+        details += '\n\n' + err.stack;
       }
 
       let shortMessage = 'Failed to increase liquidity';
@@ -465,7 +465,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
 
           <div className="deposit-total-card modal-deposit-total">
             <span>Total Deposit</span>
-            <strong>{formatAmount(depositTotal)}</strong>
+            <strong>{formatAmount(a0Num)} {t0Name} + {formatAmount(a1Num)} {t1Name}</strong>
           </div>
 
           {txState && (
