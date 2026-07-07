@@ -616,6 +616,51 @@
   gap: 4px;
 }
 
+/* individual token chips in the total deposit row */
+.deposit-total-amounts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #f4f8ff;
+  font-size: 14px;
+}
+
+.deposit-total-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(57, 208, 216, 0.08);
+  border: 1px solid rgba(57, 208, 216, 0.18);
+  border-radius: 999px;
+  padding: 3px 10px 3px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #d8e5ff;
+}
+
+.deposit-total-sphere {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 8px;
+  color: #fff;
+  flex-shrink: 0;
+  border: 1px solid rgba(8, 15, 28, 0.7);
+}
+
+.deposit-total-sep {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6a85ab;
+  padding: 0 2px;
+}
+
+
 .deposit-submit {
   border: 0;
   border-radius: 12px;

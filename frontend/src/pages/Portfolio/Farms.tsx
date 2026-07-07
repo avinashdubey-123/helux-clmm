@@ -21,9 +21,10 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
   const { publicKey, signTransaction } = useWallet();
   const program = useProgram();
   const { addTransaction } = useTransactions();
-  
+  const { refreshPools } = usePools();
+
   const [busy, setBusy] = useState(false);
-  const [txState, setTxState] = useState<{status: 'error' | 'success', title: string, message: string, details?: string, signature?: string} | null>(null);
+  const [txState, setTxState] = useState<{ status: 'error' | 'success', title: string, message: string, details?: string, signature?: string } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [copiedPool, setCopiedPool] = useState(false);
   const [copiedMint, setCopiedMint] = useState(false);
@@ -45,14 +46,18 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     if (isNaN(d.getTime())) return '';
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   };
-  
+
   let initialRewardsPerWeek = '';
   if (rewardInfo.emissionsPerSecondX64 && rewardInfo.emissionsPerSecondX64 !== '0') {
-    const Q64 = new BN(1).ushln(64);
-    const val = new BN(rewardInfo.emissionsPerSecondX64).div(Q64).toNumber();
-    // Tokens per second -> Tokens per week
+    // Use BigInt to decode X64 fixed-point without integer truncation:
+    // emissionsPerSecondX64 = raw_tokens_per_sec * 2^64
+    // Scale up by 10^9 before dividing to preserve fractional raw-token rates.
+    const DEC_SCALE = BigInt(1_000_000_000);
+    const emX64 = BigInt(rewardInfo.emissionsPerSecondX64);
+    const Q64b = BigInt(1) << BigInt(64);
+    const rawPerSec = Number((emX64 * DEC_SCALE) / Q64b) / 1_000_000_000;
     const decimalsDivisor = Math.pow(10, rewardInfo.tokenDecimals ?? 6);
-    initialRewardsPerWeek = (val * 86400 * 7 / decimalsDivisor).toFixed(2);
+    initialRewardsPerWeek = (rawPerSec / decimalsDivisor * 86400 * 7).toFixed(6).replace(/\.?0+$/, '');
   }
 
   const [formData, setFormData] = useState({
@@ -66,7 +71,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
   const isEnded = rewardInfo.endTime ? now >= rewardInfo.endTime : false;
   const isStarted = rewardInfo.openTime ? now > rewardInfo.openTime : false;
   const isActive = isStarted && !isEnded;
-  
+
   const formatDateRange = (start: number, end: number) => {
     if (!start || !end) return 'Unknown';
     const d1 = new Date(start * 1000);
@@ -87,27 +92,35 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
 
   const calculateTotalTokens = () => {
     if (!formData.endTime || !formData.rewardsPerWeek || !rewardInfo.endTime) return 0;
-    
+
     const currentNow = Math.floor(Date.now() / 1000);
-    const newEndTime = Math.floor(new Date(formData.endTime).getTime() / 1000);
     const oldEndTime = rewardInfo.endTime;
-    
+    let newEndTime = Math.floor(new Date(formData.endTime).getTime() / 1000);
+
+    if (isActive && formData.extendDays) {
+      const days = parseInt(formData.extendDays) || 0;
+      newEndTime = oldEndTime + (days * 86400);
+    }
+
     const tokensPerDay = parseFloat(formData.rewardsPerWeek) / 7;
     const newTokensPerSecond = tokensPerDay / 86400;
-    
+
     let oldTokensPerSecond = 0;
     if (rewardInfo.emissionsPerSecondX64 && rewardInfo.emissionsPerSecondX64 !== '0') {
-      const Q64 = new BN(1).ushln(64);
+      const DEC_SCALE = BigInt(1_000_000_000);
+      const emX64 = BigInt(rewardInfo.emissionsPerSecondX64);
+      const Q64b = BigInt(1) << BigInt(64);
+      const rawPerSec = Number((emX64 * DEC_SCALE) / Q64b) / 1_000_000_000;
       const decimalsDivisor = Math.pow(10, rewardInfo.tokenDecimals ?? 6);
-      oldTokensPerSecond = new BN(rewardInfo.emissionsPerSecondX64).div(Q64).toNumber() / decimalsDivisor;
+      oldTokensPerSecond = rawPerSec / decimalsDivisor;
     }
-    
+
     let requiredTokens = 0;
-    
+
     if (isActive) {
       const leftRewardTime = Math.max(0, oldEndTime - currentNow);
       const extendPeriod = Math.max(0, newEndTime - oldEndTime);
-      
+
       if (newTokensPerSecond > oldTokensPerSecond) {
         requiredTokens += leftRewardTime * (newTokensPerSecond - oldTokensPerSecond);
       }
@@ -119,17 +132,19 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
       const timeDelta = Math.max(0, newEndTime - newOpenTime);
       requiredTokens = timeDelta * newTokensPerSecond;
     }
-    
+
     return requiredTokens;
   };
-  
+
   const remainingSeconds = Math.max(0, (rewardInfo.endTime || 0) - Math.max(now, rewardInfo.openTime || 0));
   let unemitted = 0;
   if (rewardInfo.emissionsPerSecondX64 && rewardInfo.emissionsPerSecondX64 !== '0') {
-    const Q64 = new BN(1).ushln(64);
-    const emissionsPerSec = new BN(rewardInfo.emissionsPerSecondX64).div(Q64).toNumber();
+    const DEC_SCALE = BigInt(1_000_000_000);
+    const emX64 = BigInt(rewardInfo.emissionsPerSecondX64);
+    const Q64b = BigInt(1) << BigInt(64);
+    const rawPerSec = Number((emX64 * DEC_SCALE) / Q64b) / 1_000_000_000;
     const decimalsDivisor = Math.pow(10, rewardInfo.tokenDecimals ?? 6);
-    unemitted = remainingSeconds * emissionsPerSec / decimalsDivisor;
+    unemitted = remainingSeconds * rawPerSec / decimalsDivisor;
   }
 
   const getRewardParams = (decimals: number = 6) => {
@@ -139,11 +154,16 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     const currentNow = Math.floor(Date.now() / 1000);
     let openTime = Math.floor(new Date(formData.openTime).getTime() / 1000);
     let endTime = Math.floor(new Date(formData.endTime).getTime() / 1000);
-    
+
+    if (isActive && formData.extendDays) {
+      const days = parseInt(formData.extendDays) || 0;
+      endTime = Number(rewardInfo.endTime) + (days * 86400);
+    }
+
     if (isNaN(openTime) || isNaN(endTime)) {
       throw new Error("Invalid value for one or more of the fields.");
     }
-    
+
     if (!isStarted) {
       throw new Error("Cannot edit farm parameters before the farm has started.");
     }
@@ -154,25 +174,28 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     }
     const tokensPerSecond = tokensPerDay / 86400;
     const rawTokensPerSecond = tokensPerSecond * Math.pow(10, decimals);
-    const integerPart = Math.floor(rawTokensPerSecond);
-    const Q64 = new BN(1).ushln(64);
-    const emissionsPerSecondX64 = new BN(integerPart).mul(Q64);
-    
+    // Encode as X64 fixed-point using BigInt to preserve sub-integer rates.
+    // Scale by 10^9 to keep 9 decimal digits of precision before multiplying by 2^64.
+    const ENC_SCALE = BigInt(1_000_000_000);
+    const scaledRaw = BigInt(Math.round(rawTokensPerSecond * 1_000_000_000));
+    const Q64b = BigInt(1) << BigInt(64);
+    const emissionsPerSecondX64 = new BN(((scaledRaw * Q64b) / ENC_SCALE).toString());
+
     const MIN_REWARD_PERIOD = 7 * 86400;
     const MAX_REWARD_PERIOD = 90 * 86400;
     const INCREASE_EMISSIONES_PERIOD = 3 * 86400; // 72 hours
-    
+
     if (isActive) {
       const extendPeriod = endTime - Number(rewardInfo.endTime);
-      
+
       if (!formData.extendDays) {
         throw new Error("Invalid value for one or more of the fields.");
       }
-      
+
       if (extendPeriod < MIN_REWARD_PERIOD || extendPeriod > MAX_REWARD_PERIOD) {
         throw new Error("Active farms must be extended by between 7 and 90 days.");
       }
-      
+
       const currentEmissions = new BN(rewardInfo.emissionsPerSecondX64);
       if (emissionsPerSecondX64.lt(currentEmissions)) {
         const leftRewardTime = Number(rewardInfo.endTime) - currentNow;
@@ -186,7 +209,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
         throw new Error("Farm period must be between 7 and 90 days.");
       }
     }
-    
+
     if (openTime <= currentNow + 10) openTime = currentNow + 60;
     if (endTime <= openTime) throw new Error("End time must be after open time.");
 
@@ -200,7 +223,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
   let validationError: string | null = null;
   if (isEditing) {
     try {
-      getRewardParams();
+      getRewardParams(rewardInfo.tokenDecimals ?? 6);
     } catch (e: any) {
       validationError = e.message;
     }
@@ -218,7 +241,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
         if (mintInfo.value?.owner) tokenProgramId = mintInfo.value.owner;
         // @ts-ignore
         if (mintInfo.value?.data?.parsed?.info?.decimals !== undefined) mintDecimals = mintInfo.value.data.parsed.info.decimals;
-      } catch (e) {}
+      } catch (e) { }
 
       const params = getRewardParams(mintDecimals);
       const poolPda = new PublicKey(pool.poolPda);
@@ -227,18 +250,18 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
 
       const rewardVault = getPoolRewardVaultAddress(poolPda, rewardMintKey, program.programId)[0];
       const userRewardAccount = getAssociatedTokenAddressSync(rewardMintKey, publicKey, false, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
-      
+
       const instruction = await program.methods.setRewardParams(
         rewardIndex, params.emissionsPerSecondX64, params.openTime, params.endTime
       ).accounts({
         authority: publicKey, ammConfig, poolState: poolPda, operationState, tokenProgram: TOKEN_PROGRAM_ID, tokenProgram2022: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
       })
-      .remainingAccounts([
-        { pubkey: rewardVault, isWritable: true, isSigner: false },
-        { pubkey: userRewardAccount, isWritable: true, isSigner: false },
-        { pubkey: rewardMintKey, isWritable: false, isSigner: false }
-      ])
-      .instruction();
+        .remainingAccounts([
+          { pubkey: rewardVault, isWritable: true, isSigner: false },
+          { pubkey: userRewardAccount, isWritable: true, isSigner: false },
+          { pubkey: rewardMintKey, isWritable: false, isSigner: false }
+        ])
+        .instruction();
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
       const tx = new Transaction().add(instruction);
@@ -250,6 +273,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
       addTransaction(signature, `Updated Farm Reward parameters`, 'Success', true);
       setTxState({ status: 'success', title: 'Success', message: 'Reward parameters updated successfully!', signature });
       setIsEditing(false);
+      refreshPools();
     } catch (err: any) {
       setTxState({ status: 'error', title: 'Failed to update', message: 'Transaction failed.', details: err.message || err.toString() });
     } finally { setBusy(false); }
@@ -264,7 +288,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
       try {
         const mintInfo = await connection.getParsedAccountInfo(rewardMintKey);
         if (mintInfo.value?.owner) tokenProgramId = mintInfo.value.owner;
-      } catch (e) {}
+      } catch (e) { }
 
       const poolPda = new PublicKey(pool.poolPda);
       const funderTokenAccount = getAssociatedTokenAddressSync(rewardMintKey, publicKey, false, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
@@ -284,6 +308,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
 
       addTransaction(signature, `Reclaimed remaining funds`, 'Success', true);
       setTxState({ status: 'success', title: 'Success', message: 'Remaining funds reclaimed successfully!', signature });
+      refreshPools();
     } catch (err: any) {
       setTxState({ status: 'error', title: 'Failed to reclaim', message: 'Transaction failed.', details: err.message || err.toString() });
     } finally { setBusy(false); }
@@ -340,8 +365,8 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
           </span>
         </div>
         <div className="farm-row-actions">
-          <button 
-            className="pos-btn collect-rewards-btn farm-row-btn" 
+          <button
+            className="pos-btn collect-rewards-btn farm-row-btn"
             style={{ filter: (busy || !isEnded) ? 'brightness(0.8)' : 'none', opacity: (busy || !isEnded) ? 0.7 : 1 }}
             onClick={handleReclaimFunds}
             disabled={busy || !isEnded}
@@ -349,8 +374,8 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
           >
             {busy ? '...' : 'Collect Remaining Rewards'}
           </button>
-          <button 
-            className="pos-btn pos-btn-deposit farm-row-btn" 
+          <button
+            className="pos-btn pos-btn-deposit farm-row-btn"
             onClick={() => setIsEditing(!isEditing)}
             disabled={busy || !isStarted}
             title={!isStarted ? "Cannot edit farm before it has opened." : ""}
@@ -359,7 +384,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
           </button>
         </div>
       </div>
-      
+
       {isEditing && typeof document !== 'undefined' && createPortal(
         <div className="portfolio-modal-overlay">
           <div className="portfolio-modal-backdrop" onClick={() => setIsEditing(false)} />
@@ -383,26 +408,26 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
                       {isActive ? (
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="7"
-                          className="portfolio-search-bar" 
+                          className="portfolio-search-bar"
                           style={{ width: '100%', marginBottom: 0, padding: '12px', background: '#0d1321', border: '1px solid #1e2d45', borderRadius: '8px', color: '#e6f0ff', boxSizing: 'border-box' }}
                           placeholder="e.g. 7"
-                          value={formData.extendDays} 
+                          value={formData.extendDays}
                           onChange={e => {
                             const days = parseInt(e.target.value) || 0;
                             const newEndUnix = rewardInfo.endTime + (days * 86400);
                             setFormData(p => ({ ...p, extendDays: e.target.value, endTime: formatLocal(newEndUnix) }));
-                          }} 
+                          }}
                         />
                       ) : (
-                        <FarmPeriodPicker 
+                        <FarmPeriodPicker
                           className="portfolio-search-bar dt-override-style"
-                          startTime={formData.openTime} 
-                          endTime={formData.endTime} 
+                          startTime={formData.openTime}
+                          endTime={formData.endTime}
                           lockStartDate={isActive}
-                          onChange={(start, end) => setFormData(p => ({ ...p, openTime: start, endTime: end }))} 
+                          onChange={(start, end) => setFormData(p => ({ ...p, openTime: start, endTime: end }))}
                         />
                       )}
                     </div>
@@ -427,34 +452,34 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                   </div>
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ fontSize: '14px', color: '#7a8fa6', fontWeight: 600, textAlign: 'left' }}>Rewards Per Week</label>
-                  <button 
+                  <button
                     style={{ background: 'none', border: 'none', color: '#39d0d8', fontSize: '12px', cursor: 'pointer', padding: 0 }}
                     onClick={() => setFormData(p => ({ ...p, rewardsPerWeek: initialRewardsPerWeek }))}
                   >
                     Reset
                   </button>
                 </div>
-                <input 
-                  type="number" 
-                  className="portfolio-search-bar" 
+                <input
+                  type="number"
+                  className="portfolio-search-bar"
                   style={{ width: '100%', marginBottom: 0, padding: '12px', background: '#0d1321', border: '1px solid #1e2d45', borderRadius: '8px', color: '#e6f0ff' }}
                   placeholder="e.g. 1000"
-                  value={formData.rewardsPerWeek} 
-                  onChange={e => setFormData(p => ({ ...p, rewardsPerWeek: e.target.value }))} 
+                  value={formData.rewardsPerWeek}
+                  onChange={e => setFormData(p => ({ ...p, rewardsPerWeek: e.target.value }))}
                 />
               </div>
 
               {!validationError && calculateTotalTokens() > 0 && (
                 <div style={{ fontSize: '14px', color: '#39d0d8', background: 'rgba(57, 208, 216, 0.05)', padding: '12px', borderRadius: '8px' }}>
-                  <strong>{isActive ? 'Extra Required (Delta):' : 'Total Required:'}</strong> {calculateTotalTokens().toFixed(4)} tokens 
+                  <strong>{isActive ? 'Extra Required:' : 'Total Required:'}</strong> {calculateTotalTokens().toFixed(4)} tokens
                   {isEnded && ` (over ${calculateDurationDays().toFixed(1)} days)`}
                 </div>
               )}
-              
+
               {validationError && (
                 <div style={{ fontSize: '13px', color: '#ff4d4f', padding: '8px 12px', background: 'rgba(255, 77, 79, 0.1)', borderRadius: '8px', border: '1px solid rgba(255, 77, 79, 0.3)' }}>
                   ⚠️ {validationError}
@@ -474,17 +499,16 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
         </div>,
         document.body
       )}
-      {txState && (
-        <div style={{ marginTop: '16px' }}>
-          <TxSmallCard
-            status={txState.status}
-            title={txState.title}
-            description={txState.message}
-            details={txState.details}
-            signature={txState.signature || null}
-            onClose={() => setTxState(null)}
-          />
-        </div>
+      {txState && typeof document !== 'undefined' && createPortal(
+        <TxSmallCard
+          status={txState.status}
+          title={txState.title}
+          description={txState.message}
+          details={txState.details}
+          signature={txState.signature || null}
+          onClose={() => setTxState(null)}
+        />,
+        document.body
       )}
     </div>
   );
@@ -495,7 +519,7 @@ export default function Farms() {
   const { pools, loadingPools } = usePools();
   const navigate = useNavigate();
 
-  if (loadingPools) {
+  if (loadingPools && pools.length === 0) {
     return (
       <div className="portfolio-loader-container">
         <Loader size={36} />
