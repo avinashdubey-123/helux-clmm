@@ -457,8 +457,9 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ fontSize: '14px', color: '#7a8fa6', fontWeight: 600, textAlign: 'left' }}>Rewards Per Week</label>
                   <button
-                    style={{ background: 'none', border: 'none', color: '#39d0d8', fontSize: '12px', cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: '#39d0d8', fontSize: '12px', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1, padding: 0 }}
                     onClick={() => setFormData(p => ({ ...p, rewardsPerWeek: initialRewardsPerWeek }))}
+                    disabled={busy}
                   >
                     Reset
                   </button>
@@ -470,6 +471,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                   placeholder="e.g. 1000"
                   value={formData.rewardsPerWeek}
                   onChange={e => setFormData(p => ({ ...p, rewardsPerWeek: e.target.value }))}
+                  disabled={busy}
                 />
               </div>
 
@@ -487,10 +489,20 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', gap: '12px' }}>
-                <button className="pos-btn pos-btn-withdraw" onClick={() => setIsEditing(false)} disabled={busy}>
+                <button
+                  className="pos-btn pos-btn-withdraw"
+                  onClick={() => setIsEditing(false)}
+                  disabled={busy}
+                  style={{ opacity: busy ? 0.5 : 1, cursor: busy ? 'not-allowed' : 'pointer' }}
+                >
                   Cancel
                 </button>
-                <button className="pos-btn pos-btn-harvest" onClick={handleUpdateRewardParams} disabled={busy || !!validationError}>
+                <button
+                  className="pos-btn pos-btn-harvest"
+                  onClick={handleUpdateRewardParams}
+                  disabled={busy || !!validationError}
+                  style={{ opacity: ((busy || !!validationError) ? 0.5 : 1), cursor: ((busy || !!validationError) ? 'not-allowed' : 'pointer') }}
+                >
                   {busy ? 'Processing...' : 'Save Parameters'}
                 </button>
               </div>
