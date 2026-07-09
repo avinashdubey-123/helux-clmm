@@ -17,6 +17,7 @@ import copyIcon from '../../assets/copy.svg'
 import { usePools } from '../../contexts/PoolsContext'
 import { usePositions } from '../../hooks/usePositions'
 import { triggerPoolsRefetch } from '../../utils/cache'
+import walletIcon from '../../assets/wallet.svg'
 import './DepositForm.css'
 const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 const MIN_TICK = -443636
@@ -1276,7 +1277,7 @@ export default function DepositForm() {
                     <div className="deposit-token-top modal-token-top-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <TokenBadge mint={tokenMint0} name={token0Name} color={token0Color} />
                       <div className="deposit-balance-box">
-                        <img src="/src/assets/wallet.svg" alt="wallet" className="wallet-icon" />
+                        <img src={walletIcon} alt="wallet" className="wallet-icon" />
                         <span>{formatAmount(balance0)}</span>
                         <>
                           <button type="button" className="deposit-quick-btn" onClick={() => { setAmount0(formatInputAmount(balance0)); setActiveField('amount0') }}>MAX</button>
@@ -1318,7 +1319,7 @@ export default function DepositForm() {
                     <div className="deposit-token-top modal-token-top-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <TokenBadge mint={tokenMint1} name={token1Name} color={token1Color} />
                       <div className="deposit-balance-box">
-                        <img src="/src/assets/wallet.svg" alt="wallet" className="wallet-icon" />
+                        <img src={walletIcon} alt="wallet" className="wallet-icon" />
                         <span>{formatAmount(balance1)}</span>
                         <>
                           <button type="button" className="deposit-quick-btn" onClick={() => { setAmount1(formatInputAmount(balance1)); setActiveField('amount1') }}>MAX</button>
