@@ -91,7 +91,7 @@ export default function Swap() {
   const location = useLocation();
   const navigate = useNavigate();
   const rawState = (location.state as any) || {};
-  const poolFromRoute = rawState?.poolPda ? (rawState as PoolData) : null;
+  const poolFromRoute = (rawState?.pool?.poolPda ? rawState.pool : (rawState?.poolPda ? rawState : null)) as PoolData | null;
   const program = useProgram();
   const wallet = useWallet();
   const { connection } = useConnection();
@@ -2092,7 +2092,7 @@ export default function Swap() {
                         </div>
                       </div>
 
-                      {hasValidSwapAmount && (
+                      {hasValidSwapAmount && !insufficientLiquidity && (
                         <div
                           style={{
                             marginBottom: "16px",

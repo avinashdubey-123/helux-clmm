@@ -1,0 +1,189 @@
+.token-selector-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.token-selector-trigger {
+  width: 100%;
+  appearance: none;
+  background: var(--input-bg, #0d1425);
+  border: 1px solid var(--border-color, #2a3a59);
+  border-radius: 14px;
+  color: #f4f8ff;
+  font-family: inherit;
+  font-size: 15px;
+  padding: 15px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.token-selector-trigger:hover,
+.token-selector-trigger:focus {
+  border-color: var(--accent-color, #39d0d8);
+  box-shadow: 0 0 0 3px rgba(57, 208, 216, 0.15);
+  outline: none;
+}
+
+.token-selector-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.token-selector-sphere {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #e4e4e4 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.token-selector-sphere-small {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #e4e4e4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.token-selector-value strong {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.token-selector-value small {
+  color: #8ea4c4;
+}
+
+.token-selector-placeholder {
+  color: #7b92b0;
+}
+
+.token-selector-caret {
+  width: 20px;
+  height: 20px;
+  color: #7b92b0;
+}
+
+.token-selector-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: rgba(14, 22, 39, 0.98);
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  border-radius: 16px;
+  padding: 12px;
+  z-index: 50;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.token-selector-search input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(8, 17, 31, 0.8);
+  border: 1px solid rgba(44, 60, 92, 0.95);
+  padding: 12px 14px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.token-selector-search input:focus {
+  border-color: #39d0d8;
+}
+
+.token-selector-list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.token-selector-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  color: #f4f8ff;
+  transition: background 0.2s;
+}
+
+.token-selector-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.token-selector-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.token-selector-item-main span {
+  font-size: 13px;
+  color: #8ea4c4;
+}
+
+.token-selector-item-mint {
+  font-size: 12px;
+  color: #7b92b0;
+  font-family: monospace;
+}
+
+.token-selector-sphere-small {
+  padding: 12px;
+  color: #f5e3e3 !important;
+}
+
+.token-selector-empty {
+  padding: 20px;
+  text-align: center;
+  color: #8ea4c4;
+  font-size: 13px;
+}
+
+.token-selector-btn {
+  margin-top: 10px;
+  background: rgba(57, 208, 216, 0.1);
+  color: #39d0d8;
+  border: 1px solid rgba(57, 208, 216, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.token-selector-btn:hover {
+  background: rgba(57, 208, 216, 0.2);
+}
+
+.token-selector-error {
+  color: #ef4444;
+  margin-top: 8px;
+  font-size: 12px;
+}

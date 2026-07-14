@@ -110,13 +110,7 @@ export const PositionsProvider = ({ children }: { children: ReactNode }) => {
           return address;
         });
 
-        console.log(
-          `[PositionsContext] Fetching ${pdas.length} position accounts`,
-          {
-            addresses: pdas.map((pk) => pk.toBase58()),
-            wallet: publicKey.toBase58(),
-          },
-        );
+
 
         // 4. Fetch multiple accounts to find valid positions
         // @ts-ignore
@@ -190,12 +184,8 @@ export const PositionsProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const validPositions: PositionRowData[] = [];
-        const successCount = positionAccounts.filter(
-          (acc: unknown): acc is NonNullable<unknown> => acc !== null,
-        ).length;
-        console.log(
-          `[PositionsContext] Successfully fetched ${successCount}/${positionAccounts.length} positions`,
-        );
+
+
 
         for (let i = 0; i < positionAccounts.length; i++) {
           const account = positionAccounts[i];
@@ -307,9 +297,7 @@ export const PositionsProvider = ({ children }: { children: ReactNode }) => {
           );
       } finally {
         if (mounted) {
-          console.log(
-            `[PositionsContext] Position loading complete, found ${positions.length} positions`,
-          );
+
           setLoadingPositions(false);
         }
       }

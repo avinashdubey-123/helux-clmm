@@ -13,28 +13,32 @@ import { PositionsProvider } from './contexts/PositionsContext'
 
 import { TxProvider } from './contexts/TxContext'
 
+import { TokenRegistryProvider } from './contexts/TokenRegistryContext'
+
 function App() {
 
   return (
-    <TxProvider>
-      <PoolsProvider>
-        <PositionsProvider>
-          <Header />
-          <main>
-            <Routes>
-              <Route path='/' element={<Liquidity />} />
-              <Route path='/swap' element={<Swap />} />
-              <Route path='/liquidity/create' element={<InitializeForm />} />
-              <Route path='/liquidity/create-farm' element={<CreateFarm />} />
-              <Route path='/liquidity/deposit' element={<DepositForm />} />
-              <Route path='/portfolio' element={<Portfolio />} />
-              <Route path='/admin' element={<Admin />} />
-              <Route path='/admin/collect-fees' element={<CollectFees />} />
-            </Routes>
-          </main>
-        </PositionsProvider>
-      </PoolsProvider>
-    </TxProvider>
+    <TokenRegistryProvider>
+      <TxProvider>
+        <PoolsProvider>
+          <PositionsProvider>
+            <Header />
+            <main>
+              <Routes>
+                <Route path='/' element={<Liquidity />} />
+                <Route path='/swap' element={<Swap />} />
+                <Route path='/liquidity/create' element={<InitializeForm />} />
+                <Route path='/liquidity/create-farm' element={<CreateFarm />} />
+                <Route path='/liquidity/deposit' element={<DepositForm />} />
+                <Route path='/portfolio' element={<Portfolio />} />
+                <Route path='/admin' element={<Admin />} />
+                <Route path='/admin/collect-fees' element={<CollectFees />} />
+              </Routes>
+            </main>
+          </PositionsProvider>
+        </PoolsProvider>
+      </TxProvider>
+    </TokenRegistryProvider>
   )
 }
 

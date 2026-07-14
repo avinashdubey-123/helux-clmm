@@ -111,7 +111,7 @@ export const PoolsProvider = ({ children }: { children: ReactNode }) => {
       setPoolsError(null);
 
       try {
-        console.log("[PoolsContext] Starting pool load");
+        // console.log removed for cleaner output
         const programAccount = program.account as Record<
           string,
           {
@@ -121,9 +121,7 @@ export const PoolsProvider = ({ children }: { children: ReactNode }) => {
           }
         >;
         const rawPools = await callWithRetry(() => programAccount.poolState.all());
-        console.log(
-          `[PoolsContext] Fetched ${rawPools.length} pools from program`,
-        );
+
 
         const ammConfigPubkeys = new Set<string>();
         rawPools.forEach((entry: any) => {
@@ -264,9 +262,7 @@ export const PoolsProvider = ({ children }: { children: ReactNode }) => {
         );
 
         if (!cancelled) {
-          console.log(
-            `[PoolsContext] Setting ${mappedPools.length} pools to state`,
-          );
+
           setPools(mappedPools);
         }
       } catch (error: unknown) {
@@ -279,7 +275,7 @@ export const PoolsProvider = ({ children }: { children: ReactNode }) => {
         }
       } finally {
         if (!cancelled) {
-          console.log("[PoolsContext] Pool loading complete");
+
           setLoadingPools(false);
         }
       }

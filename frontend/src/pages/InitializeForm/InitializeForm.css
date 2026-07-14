@@ -152,9 +152,9 @@
   border: 1px solid rgba(171, 196, 255, 0.24);
 }
 .clmm-step.active .clmm-step-index {
-  background: #abc4ff;
+  background: #4edde4;
   color: #0b1221;
-  border-color: #abc4ff;
+  border-color: #4edde4;
 }
 .clmm-step.completed .clmm-step-index {
   background: rgba(171, 196, 255, 0.14);
@@ -402,11 +402,12 @@
 }
 
 .clmm-primary-btn {
-  background: linear-gradient(90deg, #39d0d8 0%, #4a7bff 100%);
-  color: #081120;
+  background: #4edde4;
+  color: #0b1221;
+  box-shadow: 0 4px 14px rgba(78, 221, 228, 0.4);
 }
 
-.clmm-primary-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #2a3b4c; color: #7a8fa6; }
+.clmm-primary-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #2a3b4c; color: #7a8fa6; box-shadow: none; }
 
 .clmm-secondary-btn {
   background: rgba(17, 27, 49, 0.96);
@@ -414,7 +415,10 @@
   border: 1px solid rgba(57, 208, 216, 0.18);
 }
 
-.clmm-primary-btn:hover:not(:disabled),
+.clmm-primary-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(78, 221, 228, 0.6);
+}
 .clmm-secondary-btn:hover:not(:disabled) { transform: translateY(-1px); }
 
 .clmm-toggle-row {
@@ -436,9 +440,9 @@
 }
 
 .clmm-toggle.active {
-  border-color: rgba(57, 208, 216, 0.85);
-  background: rgba(57, 208, 216, 0.12);
-  color: #f4f8ff;
+  border-color: #4edde4;
+  background: #4edde4;
+  color: #0b1221;
 }
 
 .clmm-toggle-caption { color: #8ea4c4; font-size: 13px; }
@@ -469,9 +473,9 @@
 }
 
 .clmm-range-option.active {
-  background: rgba(57, 208, 216, 0.12);
-  border-color: rgba(57, 208, 216, 0.85);
-  color: #f4f8ff;
+  background: #4edde4;
+  border-color: #4edde4;
+  color: #0b1221;
 }
 
 .clmm-range-summary {
@@ -499,7 +503,8 @@
   border: 1px solid rgba(44, 60, 92, 0.95);
 }
 
-.clmm-summary-strip div { display: flex; flex-direction: column; gap: 6px; }
+.clmm-summary-strip > div { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; justify-content: center; }
+.clmm-summary-strip span { color: #8ea4c4; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
 .clmm-summary-strip strong { color: #f4f8ff; font-size: 15px; }
 
 .clmm-deposit-card {
@@ -704,12 +709,16 @@
   cursor: pointer;
   font-weight: 700;
   font-size: 14px;
-  background: linear-gradient(90deg, #39d0d8 0%, #4a7bff 100%);
-  color: #081120;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  background: #4edde4;
+  color: #0b1221;
+  box-shadow: 0 4px 14px rgba(78, 221, 228, 0.4);
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
-.liquidity-primary-btn:hover { transform: translateY(-1px); }
+.liquidity-primary-btn:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 20px rgba(78, 221, 228, 0.6);
+}
 
 .liquidity-highlight-grid {
   display: grid;
@@ -850,4 +859,119 @@
   opacity: 0.35;
   pointer-events: none;
   user-select: none;
+}
+
+/* Step 2 Inline Swap Toggle */
+.clmm-price-toggle-wrapper {
+  display: flex;
+  justify-content: left;
+  margin-bottom: 24px;
+}
+
+.clmm-price-toggle-strip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.clmm-price-toggle-text {
+  font-size: 14px;
+  color: #d3d3d3;
+  font-weight: 600;
+}
+
+.clmm-price-toggle-btn {
+  background: rgba(78, 221, 228, 0.1);
+  border: 1px solid #4edde4;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.clmm-price-toggle-btn:hover:not(:disabled) {
+  background: rgba(78, 221, 228, 0.2);
+}
+
+.clmm-price-toggle-btn img {
+  width: 16px;
+  height: 16px;
+  filter: invert(78%) sepia(46%) saturate(601%) hue-rotate(131deg) brightness(99%) contrast(98%);
+}
+
+/* Step 3 Summary Strip & Avatar */
+.clmm-pool-display {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.clmm-inline-price-box {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.clmm-inline-swap-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0px;
+}
+
+.clmm-inline-swap-btn img {
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.clmm-inline-swap-btn:hover:not(:disabled) img {
+  opacity: 1;
+}
+
+.clmm-token-avatar {
+  color: #e4e4e4;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px;
+}
+
+.clmm-relative-container {
+  position: relative;
+}
+
+.clmm-lock-icon {
+  width: 24px;
+  height: 24px;
+  filter: invert(1);
+}
+
+.clmm-grid-margin {
+  margin-bottom: 16px;
+}
+
+.clmm-insufficient-field {
+  border: 1px solid rgba(255, 74, 104, 0.8) !important;
+  background: rgba(255, 74, 104, 0.04) !important;
+}
+
+.clmm-insufficient-field input {
+  color: #ff4a68 !important;
 }

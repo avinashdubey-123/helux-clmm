@@ -12,6 +12,10 @@ import { useTransactions } from '../../contexts/TxContext'
 import { getShortTokenName } from '../../utils/token'
 import { triggerPoolsRefetch } from '../../utils/cache'
 import { usePositions } from '../../hooks/usePositions'
+import TokenSelector from '../../components/TokenSelector/TokenSelector'
+import { useTokenRegistry } from '../../contexts/TokenRegistryContext'
+import swapIcon from '../../assets/swap.svg'
+import walletIcon from '../../assets/wallet.svg'
 import './InitializeForm.css'
 
 type Step = 1 | 2 | 3
@@ -87,15 +91,54 @@ export default function InitializeForm() {
   const [selectedFeeTier, setSelectedFeeTier] = useState('')
   const [mint0Address, setMint0Address] = useState('')
   const [mint1Address, setMint1Address] = useState('')
-  const [mint0Symbol] = useState('TOKEN0')
-  const [mint1Symbol] = useState('TOKEN1')
+  
+  const { tokens } = useTokenRegistry()
+  const token0 = useMemo(() => tokens.find(t => t.mint === mint0Address), [tokens, mint0Address])
+  const token1 = useMemo(() => tokens.find(t => t.mint === mint1Address), [tokens, mint1Address])
+
+  const mint0Symbol = token0?.symbol || (mint0Address ? getShortTokenName(mint0Address) : 'Select Token A')
+  const mint1Symbol = token1?.symbol || (mint1Address ? getShortTokenName(mint1Address) : 'Select Token B')
+  const mint0Color = token0?.color || '#555'
+  const mint1Color = token1?.color || '#555'
   const [priceUnit, setPriceUnit] = useState<PriceUnit>('token0')
   const [initialPrice, setInitialPrice] = useState('1')
   const [rangeMode, setRangeMode] = useState<RangeMode>('custom')
   const [rangeMin, setRangeMin] = useState('0.50')
   const [rangeMax, setRangeMax] = useState('1.50')
-  const [depositToken0, setDepositToken0] = useState('0')
-  const [depositToken1, setDepositToken1] = useState('0')
+  const [depositToken0, setDepositToken0] = useState('')
+  const [depositToken1, setDepositToken1] = useState('')
+
+  const [balance0, setBalance0] = useState<number | null>(null)
+  const [balance1, setBalance1] = useState<number | null>(null)
+
+  useEffect(() => {
+    let active = true;
+    const fetchBalance = async (mintAddress: string, setter: (b: number) => void) => {
+      if (!wallet?.publicKey || !mintAddress) {
+        setter(0);
+        return;
+      }
+      try {
+        if (mintAddress === '11111111111111111111111111111111' || mintAddress === 'So11111111111111111111111111111111111111112' || mintAddress.toLowerCase() === 'so11111111111111111111111111111111111111112') {
+          const bal = await connection.getBalance(wallet.publicKey);
+          if (active) setter(bal / 1e9);
+        } else {
+          const accounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, { mint: new PublicKey(mintAddress) });
+          if (accounts.value.length > 0) {
+            const bal = accounts.value[0].account.data.parsed.info.tokenAmount.uiAmount ?? 0;
+            if (active) setter(bal);
+          } else {
+            if (active) setter(0);
+          }
+        }
+      } catch (e) {
+        if (active) setter(0);
+      }
+    };
+    fetchBalance(mint0Address, setBalance0);
+    fetchBalance(mint1Address, setBalance1);
+    return () => { active = false; };
+  }, [wallet?.publicKey, mint0Address, mint1Address, connection]);
   
   const [ammConfigs, setAmmConfigs] = useState<AmmConfigTier[]>(fallbackFeeTiers)
   const [configsLoading, setConfigsLoading] = useState(false)
@@ -231,56 +274,71 @@ export default function InitializeForm() {
     setRangeMax(validPriceBounds.max.toFixed(4))
   }, [rangeMode, validPriceBounds.min, validPriceBounds.max, priceUnit])
 
-  useEffect(() => {
-    if (priceValue <= 0) return
+  const getOtherTokenAmount = (amount: number, inputType: 'token0' | 'token1') => {
+    if (depositMode !== 'both') return 0;
+    const currentPrice = token1PerToken0;
+    if (currentPrice <= 0) return 0;
+    
+    if (rangeMode === 'full') {
+      return inputType === 'token0' ? amount * currentPrice : amount / currentPrice;
+    }
 
-    const a0 = Number(depositToken0)
-    const a1 = Number(depositToken1)
+    const minVal = Number(rangeMin) || 0;
+    const maxVal = Number(rangeMax) || Infinity;
+    
+    let pMin = priceUnit === 'token1' ? minVal : (maxVal === Infinity ? 0 : 1 / maxVal);
+    let pMax = priceUnit === 'token1' ? maxVal : (minVal === 0 ? Infinity : 1 / minVal);
+
+    if (pMin > pMax) {
+      const temp = pMin; pMin = pMax; pMax = temp;
+    }
+
+    if (currentPrice <= pMin || currentPrice >= pMax) {
+      return 0; // Off-range requires only 1 token
+    }
+
+    const sqrtP = Math.sqrt(currentPrice);
+    const sqrtPL = Math.sqrt(pMin);
+    const sqrtPU = Math.sqrt(pMax);
+
+    // CLMM required ratio: Amount1 / Amount0
+    const ratio = (sqrtP - sqrtPL) * (sqrtP * sqrtPU) / (sqrtPU - sqrtP);
+    
+    return inputType === 'token0' ? amount * ratio : amount / ratio;
+  };
+
+  useEffect(() => {
+    if (priceValue <= 0 || depositMode !== 'both') return;
+
+    const a0 = Number(depositToken0);
+    const a1 = Number(depositToken1);
 
     if (Number.isFinite(a0) && a0 > 0) {
-      setDepositToken1((a0 * token1PerToken0).toFixed(6))
+      setDepositToken1(getOtherTokenAmount(a0, 'token0').toFixed(6));
     } else if (Number.isFinite(a1) && a1 > 0) {
-      setDepositToken0((a1 / token1PerToken0).toFixed(6))
+      setDepositToken0(getOtherTokenAmount(a1, 'token1').toFixed(6));
     }
-  }, [priceUnit, priceValue])
-
-  // When the user toggles the `priceUnit`, convert the current `initialPrice`
-  // to the new unit. Preserve the input if it's not a valid positive number.
-  useEffect(() => {
-    // this effect runs when priceUnit changes; compute reciprocal when possible
-    const numeric = Number(initialPrice)
-    if (!Number.isFinite(numeric) || numeric <= 0) return
-
-    // If priceUnit is 'token0', the displayed value means token0 per token1.
-    // We want to display token1 per token0 when toggled, which is reciprocal.
-    const converted = priceUnit === 'token0' ? 1 / numeric : 1 / numeric
-    // Both branches compute reciprocal; keep decimal precision reasonable
-    const formatted = converted.toFixed(6).replace(/\.0+$/, '')
-    setInitialPrice(formatted)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceUnit])
+  }, [priceUnit, priceValue, rangeMode, rangeMin, rangeMax, depositMode]);
 
   const syncDepositFromToken0 = (value: string) => {
-    setDepositToken0(value)
-    const amount = Number(value)
+    setDepositToken0(value);
+    const amount = Number(value);
     if (!Number.isFinite(amount) || amount < 0 || token1PerToken0 <= 0 || depositMode !== 'both') {
-      if (depositMode !== 'both') setDepositToken1('0')
-      else if (!Number.isFinite(amount) || amount < 0 || token1PerToken0 <= 0) setDepositToken1('0')
-      return
+      setDepositToken1('0');
+      return;
     }
-    setDepositToken1((amount * token1PerToken0).toFixed(6))
-  }
+    setDepositToken1(getOtherTokenAmount(amount, 'token0').toFixed(6));
+  };
 
   const syncDepositFromToken1 = (value: string) => {
-    setDepositToken1(value)
-    const amount = Number(value)
+    setDepositToken1(value);
+    const amount = Number(value);
     if (!Number.isFinite(amount) || amount < 0 || token1PerToken0 <= 0 || depositMode !== 'both') {
-      if (depositMode !== 'both') setDepositToken0('0')
-      else if (!Number.isFinite(amount) || amount < 0 || token1PerToken0 <= 0) setDepositToken0('0')
-      return
+      setDepositToken0('0');
+      return;
     }
-    setDepositToken0((amount / token1PerToken0).toFixed(6))
-  }
+    setDepositToken0(getOtherTokenAmount(amount, 'token1').toFixed(6));
+  };
 
   const shiftRange = (field: 'min' | 'max', direction: -1 | 1) => {
     const setter = field === 'min' ? setRangeMin : setRangeMax
@@ -323,6 +381,38 @@ export default function InitializeForm() {
       return nextCompleted.sort()
     })
     setStep(nextStep)
+  }
+
+  const handleTogglePriceUnit = () => {
+    setPriceUnit(prev => (prev === 'token0' ? 'token1' : 'token0'))
+    
+    const invert = (value: string) => {
+      const num = Number(value)
+      if (!Number.isFinite(num) || num === 0) return value
+      
+      let inv = 1 / num
+      
+      // Clean up floating point drift to recover original shorter decimals
+      // For instance, turning 1.70000085 back into 1.7
+      for (let decimals = 1; decimals <= 6; decimals++) {
+        const candidate = Number(inv.toFixed(decimals))
+        if (candidate > 0 && Math.abs(1 / candidate - num) < 1e-6) {
+          inv = candidate
+          break
+        }
+      }
+      
+      // Limit to 6 decimals, trimming any trailing zeros
+      return inv.toFixed(6).replace(/\.?0+$/, '')
+    }
+
+    setInitialPrice(invert(initialPrice))
+    
+    const newMax = invert(rangeMin)
+    const newMin = invert(rangeMax)
+    
+    setRangeMin(newMin)
+    setRangeMax(newMax)
   }
 
   const handleCreatePoolDesign = () => {
@@ -630,6 +720,10 @@ export default function InitializeForm() {
     'Last, please enter token deposit amount',
   ]
 
+  const isInsufficient0 = balance0 !== null && Number(depositToken0 || 0) > balance0
+  const isInsufficient1 = balance1 !== null && Number(depositToken1 || 0) > balance1
+  const hasInsufficientBalance = isInsufficient0 || isInsufficient1
+
   return (
     <div className="clmm-page">
       <div className="clmm-form-top">
@@ -670,11 +764,11 @@ export default function InitializeForm() {
               <div className="clmm-grid two-col">
                 <label className="clmm-field">
                   <span>Mint A</span>
-                  <input value={mint0Address} onChange={(event) => setMint0Address(event.target.value)} placeholder="Enter token mint address" disabled={formDisabled} />
+                  <TokenSelector selectedMint={mint0Address} onSelect={setMint0Address} excludeMint={mint1Address} />
                 </label>
                 <label className="clmm-field">
                   <span>Mint B</span>
-                  <input value={mint1Address} onChange={(event) => setMint1Address(event.target.value)} placeholder="Enter token mint address" disabled={formDisabled} />
+                  <TokenSelector selectedMint={mint1Address} onSelect={setMint1Address} excludeMint={mint0Address} />
                 </label>
               </div>
 
@@ -728,23 +822,22 @@ export default function InitializeForm() {
             <div className="clmm-panel">
             
 
-              <div className="clmm-toggle-row">
-                <button type="button" className={`clmm-toggle ${priceUnit === 'token0' ? 'active' : ''}`} onClick={() => setPriceUnit('token0')} disabled={formDisabled}>
-                  token0 per token1
-                </button>
-                <button type="button" className={`clmm-toggle ${priceUnit === 'token1' ? 'active' : ''}`} onClick={() => setPriceUnit('token1')} disabled={formDisabled}>
-                  token1 per token0
-                </button>
-                <div className="clmm-toggle-caption">
-                  Showing price as {priceUnit === 'token0' ? 'token0 per token1' : 'token1 per token0'}
-                </div>
-              </div>
-
-              <div className="clmm-grid">
+              <div className="clmm-grid clmm-grid-margin">
                 <label className="clmm-field clmm-field-wide">
                   <span>Initial price</span>
                   <input value={initialPrice} onChange={(event) => setInitialPrice(event.target.value)} placeholder="0.50" inputMode="decimal" disabled={formDisabled} />
                 </label>
+              </div>
+
+              <div className="clmm-price-toggle-wrapper">
+                <div className="clmm-price-toggle-strip">
+                  <span className="clmm-price-toggle-text">
+                    1 {priceUnit === 'token0' ? mint1Symbol : mint0Symbol} ≈ {initialPrice || '0'} {priceUnit === 'token0' ? mint0Symbol : mint1Symbol}
+                  </span>
+                  <button type="button" onClick={handleTogglePriceUnit} disabled={formDisabled} className="clmm-price-toggle-btn">
+                    <img src={swapIcon} alt="swap direction" />
+                  </button>
+                </div>
               </div>
 
               <div className="clmm-subsection">
@@ -816,19 +909,9 @@ export default function InitializeForm() {
 
               <div className="clmm-summary-strip">
                 <div>
-                  <span>Pair</span>
-                  <div className="clmm-pair-display" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {/* Token 0 avatar */}
-                    <div className="clmm-token-avatar" style={{ backgroundColor: '#555', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '600' }}>
-                      {mint0Symbol.slice(0, 2).toUpperCase()}
-                    </div>
-                    {/* Plus icon */}
-                    <div className="clmm-pair-plus" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>+</div>
-                    {/* Token 1 avatar */}
-                    <div className="clmm-token-avatar" style={{ backgroundColor: '#555', color: '#fff', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '600' }}>
-                      {mint1Symbol.slice(0, 2).toUpperCase()}
-                    </div>
-                    <strong className="pool-name-hover" title={`${mint0Symbol} (${mint0Address.slice(0,6)}) / ${mint1Symbol} (${mint1Address.slice(0,6)})`}>{mint0Symbol} / {mint1Symbol}</strong>
+                  <span>Pool</span>
+                  <div className="clmm-pool-display">
+                    <strong className="pool-name-hover" title={`${mint0Symbol} (${mint0Address.slice(0,6)}) - ${mint1Symbol} (${mint1Address.slice(0,6)})`}>{mint0Symbol} - {mint1Symbol}</strong>
                   </div>
                 </div>
                 <div>
@@ -837,32 +920,41 @@ export default function InitializeForm() {
                 </div>
                 <div>
                   <span>Initial price</span>
-                  <strong>{initialPrice || '-'}</strong>
+                  <strong>1 {priceUnit === 'token0' ? mint1Symbol : mint0Symbol} ≈ {initialPrice || '0'} {priceUnit === 'token0' ? mint0Symbol : mint1Symbol}</strong>
                 </div>
                 <div>
                   <span>Range</span>
-                  <strong>{rangeMode === 'full' ? 'Full range' : `${rangeMin} - ${rangeMax}`}</strong>
+                  <strong>{rangeMode === 'full' ? 'Full range' : `${rangeMin} - ${rangeMax} ${priceUnit === 'token0' ? mint0Symbol : mint1Symbol} per ${priceUnit === 'token0' ? mint1Symbol : mint0Symbol}`}</strong>
                 </div>
               </div>
 
               <div className="clmm-deposit-card">
-                <div style={{ position: 'relative' }}>
+                <div className="clmm-relative-container">
                   <div className={depositMode === 'token1Only' ? 'is-locked-blur' : ''}>
-                    <div className="clmm-asset-row">
+                    <div className="clmm-asset-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <button type="button" className="clmm-asset-pill">
-                        <span className="clmm-token-dot dot-0" />
+                        <div className="clmm-token-avatar" style={{ backgroundColor: mint0Color }}>
+                          {mint0Symbol.slice(0, 2).toUpperCase()}
+                        </div>
                         <strong>{mint0Symbol}</strong>
                       </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(8, 17, 31, 0.4)', padding: '4px 8px', borderRadius: '8px' }}>
+                          <img src={walletIcon} alt="wallet" style={{ width: 14, height: 14, opacity: 0.7 }} />
+                          <span style={{ fontSize: '13px', color: '#a0aec0', fontWeight: 600 }}>{balance0 !== null ? balance0.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
+                        </div>
+                        <button type="button" onClick={() => syncDepositFromToken0(balance0 ? (balance0 / 2).toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>50%</button>
+                        <button type="button" onClick={() => syncDepositFromToken0(balance0 ? balance0.toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>MAX</button>
+                      </div>
                     </div>
-                    <div className="clmm-amount-row">
+                    <div className={`clmm-amount-row ${isInsufficient0 ? 'clmm-insufficient-field' : ''}`}>
                       <input value={depositToken0} onChange={(event) => syncDepositFromToken0(event.target.value)} placeholder="0" inputMode="decimal" disabled={formDisabled || depositMode === 'token1Only'} />
-                      <span>~$0</span>
                     </div>
                   </div>
                   {depositMode === 'token1Only' && (
                     <div className="clmm-token-locked-overlay">
                       <div className="clmm-token-locked-icon">
-                        <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24, filter: 'invert(1)' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <img src="/src/assets/lock.svg" alt="locked" className="clmm-lock-icon" onError={(e) => (e.currentTarget.style.display = 'none')} />
                         {!document.querySelector('img[src="/src/assets/lock.svg"]')}
                       </div>
                       <div className="clmm-token-locked-title">Single asset deposit only.</div>
@@ -873,23 +965,32 @@ export default function InitializeForm() {
 
                 <div className="clmm-plus">+</div>
 
-                <div style={{ position: 'relative' }}>
+                <div className="clmm-relative-container">
                   <div className={depositMode === 'token0Only' ? 'is-locked-blur' : ''}>
-                    <div className="clmm-asset-row">
+                    <div className="clmm-asset-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <button type="button" className="clmm-asset-pill">
-                        <span className="clmm-token-dot dot-1" />
+                        <div className="clmm-token-avatar" style={{ backgroundColor: mint1Color }}>
+                          {mint1Symbol.slice(0, 2).toUpperCase()}
+                        </div>
                         <strong>{mint1Symbol}</strong>
                       </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(8, 17, 31, 0.4)', padding: '4px 8px', borderRadius: '8px' }}>
+                          <img src={walletIcon} alt="wallet" style={{ width: 14, height: 14, opacity: 0.7 }} />
+                          <span style={{ fontSize: '13px', color: '#a0aec0', fontWeight: 600 }}>{balance1 !== null ? balance1.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
+                        </div>
+                        <button type="button" onClick={() => syncDepositFromToken1(balance1 ? (balance1 / 2).toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>50%</button>
+                        <button type="button" onClick={() => syncDepositFromToken1(balance1 ? balance1.toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>MAX</button>
+                      </div>
                     </div>
-                    <div className="clmm-amount-row">
+                    <div className={`clmm-amount-row ${isInsufficient1 ? 'clmm-insufficient-field' : ''}`}>
                       <input value={depositToken1} onChange={(event) => syncDepositFromToken1(event.target.value)} placeholder="0" inputMode="decimal" disabled={formDisabled || depositMode === 'token0Only'} />
-                      <span>~$0</span>
                     </div>
                   </div>
                   {depositMode === 'token0Only' && (
                     <div className="clmm-token-locked-overlay">
                       <div className="clmm-token-locked-icon">
-                        <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24, filter: 'invert(1)' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <img src="/src/assets/lock.svg" alt="locked" className="clmm-lock-icon" onError={(e) => (e.currentTarget.style.display = 'none')} />
                         {!document.querySelector('img[src="/src/assets/lock.svg"]') && "🔒"}
                       </div>
                       <div className="clmm-token-locked-title">Single asset deposit only.</div>
@@ -898,24 +999,22 @@ export default function InitializeForm() {
                   )}
                 </div>
 
-                <div className="clmm-total-row">
-                  <div>
-                    <span>Total deposit </span>
-                    <strong>$0</strong>
+                {(Number(depositToken0) > 0 || Number(depositToken1) > 0) && (
+                  <div className="clmm-total-row">
+                    <div>
+                      <span>Total deposit </span>
+                      <strong>{Number(depositToken0 || 0).toFixed(6)} {mint0Symbol} &amp; {Number(depositToken1 || 0).toFixed(6)} {mint1Symbol}</strong>
+                    </div>
                   </div>
-                  <div>
-                    <span>Deposit ratio </span>
-                      <strong>{`${Number(depositToken0 || 0).toFixed(6)} / ${Number(depositToken1 || 0).toFixed(6)}`}</strong>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="clmm-footer">
                 <button type="button" className="clmm-secondary-btn" onClick={() => goBackToStep(2)} disabled={formDisabled}>
                   Back to range
                 </button>
-                <button type="button" className="clmm-primary-btn" onClick={handleCreatePoolDesign} disabled={formDisabled}>
-                  Create pool design
+                <button type="button" className="clmm-primary-btn" onClick={handleCreatePoolDesign} disabled={formDisabled || txStatus?.status === 'info' || hasInsufficientBalance}>
+                  {hasInsufficientBalance ? 'Insufficient balance' : (txStatus?.status === 'info' ? 'Processing...' : 'Create pool')}
                 </button>
               </div>
             </div>
