@@ -4,16 +4,7 @@ import { AnchorProvider, Program, Idl } from '@coral-xyz/anchor'
 import { PublicKey } from '@solana/web3.js'
 import idlJson from '../../idl/amm_v3.json'
 
-const DEVNET_PROGRAM_ID = 'HxfQdbYzW1fgh4NiC4NFo7A13Nf5Nch3D4DNNnwYYnrh'
-const LOCALNET_PROGRAM_ID = 'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK'
-
-const getProgramIdForCluster = (endpoint: string) => {
-    if (endpoint.includes('localhost') || endpoint.includes('127.0.0.1')) {
-        return LOCALNET_PROGRAM_ID
-    }
-
-    return DEVNET_PROGRAM_ID
-}
+import { getProgramIdBase58ForCluster } from '../constants'
 
 export default function useProgram(): Program | null {
     const { connection } = useConnection()
@@ -46,7 +37,7 @@ export default function useProgram(): Program | null {
         try {
             const idl = JSON.parse(JSON.stringify(idlJson)) as Idl & { address?: string }
             const endpoint = connection.rpcEndpoint || (window as any).solana?.rpcEndpoint || ''
-            idl.address = getProgramIdForCluster(endpoint)
+            idl.address = getProgramIdBase58ForCluster(endpoint)
             return new Program(idl, provider)
         } catch (err) {
             console.error('useProgram: failed to create Program', err)

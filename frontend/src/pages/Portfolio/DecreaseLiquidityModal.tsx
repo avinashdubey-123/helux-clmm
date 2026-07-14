@@ -63,6 +63,11 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
   const removeAmount0 = (maxAmount0 * percentage) / 100
   const removeAmount1 = (maxAmount1 * percentage) / 100
 
+  // Check if manual input exceeds actual position liquidity with a small floating-point buffer
+  const isAmount0Exceeded = Number(amount0Input) > maxAmount0 * 1.0001
+  const isAmount1Exceeded = Number(amount1Input) > maxAmount1 * 1.0001
+  const exceedLiquidity = isAmount0Exceeded || isAmount1Exceeded
+
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setActiveField('slider')
     const newPct = Number(e.target.value)
@@ -114,7 +119,12 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
     setBusy(true)
 
     try {
-      const liquidityToRemove = new BN(position.liquidity).mul(new BN(percentage)).div(new BN(100))
+      // Use high precision integer arithmetic to avoid truncation mismatches.
+      // percentage can be a float like 12.34567% when derived from manual token amount inputs.
+      // new BN() truncates floats, causing the smart contract to burn fewer tokens than visually expected,
+      // which triggers the minimum bounds slippage error down the line. 
+      const precisionPct = Math.floor(percentage * 1_000_000)
+      const liquidityToRemove = new BN(position.liquidity).mul(new BN(precisionPct)).div(new BN(100_000_000))
       
       // Fetch mint accounts to calculate transfer fees
       const mint0Key = new PublicKey(pool.tokenMint0)
@@ -151,9 +161,16 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
         }
       }
 
-      // Accounting for transfer fees + 1% slippage to absorb precise tick math mismatches
-      const amount0Min = new BN(Math.max(0, Math.floor((grossAmount0 - transferFee0) * 0.99)))
-      const amount1Min = new BN(Math.max(0, Math.floor((grossAmount1 - transferFee1) * 0.99)))
+      // Accounting for transfer fees + 5% slippage to absorb precise tick math mismatches.
+      // The percentage offset handles large amounts, but for extremely low fractional withdrawals (e.g. < 8%),
+      // 5% of a "dust" number is essentially 0 buffer, which causes rounding discrepancies to fail the contract.
+      // We subtract an additional flat dust buffer (100 units) to guarantee safe slippage coverage.
+      const slippageBuffer0 = Math.floor(grossAmount0 * 0.05)
+      const slippageBuffer1 = Math.floor(grossAmount1 * 0.05)
+      const flatDustBuffer = 100
+
+      const amount0Min = new BN(Math.max(0, grossAmount0 - transferFee0 - slippageBuffer0 - flatDustBuffer))
+      const amount1Min = new BN(Math.max(0, grossAmount1 - transferFee1 - slippageBuffer1 - flatDustBuffer))
 
       const poolPda = new PublicKey(pool.poolPda)
       const tickSpacing = pool.tickSpacing
@@ -306,7 +323,7 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
             </div>
           </div>
 
-          <div className="deposit-token-card modal-deposit-total">
+          <div className={`deposit-token-card modal-deposit-total ${isAmount0Exceeded ? 'deposit-token-card-invalid' : ''}`}>
             <div className="deposit-token-top modal-token-top-between">
               <strong>{t0Name}</strong>
             </div>
@@ -324,7 +341,7 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
 
           <div className="deposit-plus modal-deposit-plus">+</div>
 
-          <div className="deposit-token-card">
+          <div className={`deposit-token-card ${isAmount1Exceeded ? 'deposit-token-card-invalid' : ''}`}>
             <div className="deposit-token-top modal-token-top-between">
               <strong>{t1Name}</strong>
             </div>
@@ -364,11 +381,11 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
           )}
 
           <button 
-            className="portfolio-btn modal-submit-btn" 
-            disabled={busy || percentage <= 0} 
+            className={`portfolio-btn modal-submit-btn ${exceedLiquidity ? 'insufficient-balance-btn' : ''}`}
+            disabled={busy || percentage <= 0 || exceedLiquidity} 
             onClick={handleWithdraw}
           >
-            {busy ? <span className="loader-dots">Processing...</span> : 'Withdraw Liquidity'}
+            {busy ? <span className="loader-dots">Processing...</span> : exceedLiquidity ? 'Insufficient Liquidity' : 'Withdraw Liquidity'}
           </button>
         </div>
       </div>

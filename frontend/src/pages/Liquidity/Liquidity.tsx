@@ -13,7 +13,8 @@ import {
   getCachedPoolData,
 } from "../../utils/cache";
 import useProgram from "../../utils/useProgram";
-import { PublicKey } from "@solana/web3.js";
+
+import { getProgramIdForCluster } from "../../constants";
 
 const formatBalance = (amount?: number | null, decimals = 6) => {
   if (amount == null) return "-";
@@ -257,7 +258,7 @@ const Liquidity = () => {
       }
       const pgmId = program
         ? (program as any).programId
-        : new PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
+        : getProgramIdForCluster(connection?.rpcEndpoint);
       const batchSize = 10;
       const newDisplayPools: PoolRowData[] = [];
 

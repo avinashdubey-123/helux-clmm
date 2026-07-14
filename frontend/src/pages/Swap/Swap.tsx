@@ -12,6 +12,7 @@ import {
   getMint,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
+import { getProgramIdForCluster } from "../../constants";
 import copyIcon from "../../assets/copy.svg";
 import straightArrowIcon from "../../assets/straight-arrow.svg";
 import swapIcon from "../../assets/swap.svg";
@@ -120,7 +121,7 @@ export default function Swap() {
         return;
       }
 
-      const pgmId = program ? (program as any).programId : new PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
+      const pgmId = program ? (program as any).programId : getProgramIdForCluster(connection?.rpcEndpoint);
       const batchSize = 10;
       const newDisplayPools: PoolRowData[] = [];
 
@@ -814,7 +815,7 @@ export default function Swap() {
       poolAddr,
       program
         ? (program as any).programId
-        : new PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"),
+        : getProgramIdForCluster(connection?.rpcEndpoint),
     );
 
     const token0Vault =
