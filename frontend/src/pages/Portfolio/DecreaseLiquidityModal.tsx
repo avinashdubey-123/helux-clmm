@@ -119,87 +119,41 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
       // Fetch mint accounts to calculate transfer fees
       const mint0Key = new PublicKey(pool.tokenMint0)
       const mint1Key = new PublicKey(pool.tokenMint1)
-      
+
       const [mint0Info, mint1Info] = await Promise.all([
         connection.getAccountInfo(mint0Key),
         connection.getAccountInfo(mint1Key)
       ])
-      
-      // Calculate transfer fees (similar to Rust get_transfer_fee logic)
-      // Token-2022 transfer fee config is at specific offsets in the mint account data
-      // For standard SPL tokens, there's no transfer fee
+
       let transferFee0 = 0
       let transferFee1 = 0
-      
       const token2022ProgramId = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
-      const standardTokenProgramId = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
-      
-      console.log('[Withdraw] Mint account analysis:', {
-        mint0Owner: mint0Info?.owner?.toBase58(),
-        mint1Owner: mint1Info?.owner?.toBase58(),
-        isToken2022_0: mint0Info?.owner?.equals(token2022ProgramId),
-        isToken2022_1: mint1Info?.owner?.equals(token2022ProgramId),
-        isStandardSPL_0: mint0Info?.owner?.equals(standardTokenProgramId),
-        isStandardSPL_1: mint1Info?.owner?.equals(standardTokenProgramId),
-        mint0DataLength: mint0Info?.data?.length,
-        mint1DataLength: mint1Info?.data?.length
-      })
-      
-      if (mint0Info && mint0Info.data.length >= 82) {
-        // Check if this is a Token-2022 mint (owner != Token program)
-        if (mint0Info.owner.equals(token2022ProgramId)) {
-          // Read transfer fee config from Token-2022 mint
-          // TransferFeeConfig structure: transfer_fee_basis_points (u16) at offset 72, maximum_fee (u64) at offset 74
-          const feeBasisPoints = mint0Info.data.readUInt16LE(72)
-          const maxFee = Number(mint0Info.data.readBigUInt64LE(74))
-          const grossAmount0 = Math.floor(removeAmount0 * 10 ** pool.mintDecimals0)
-          console.log('[Withdraw] Token0 transfer fee config:', {
-            feeBasisPoints,
-            maxFee,
-            grossAmount0,
-            isMaxFee: feeBasisPoints === 10000
-          })
-          if (feeBasisPoints > 0 && feeBasisPoints < 10000) {
-            transferFee0 = Math.floor(grossAmount0 * feeBasisPoints / 10000)
-          } else if (feeBasisPoints === 10000) {
-            transferFee0 = maxFee
-          }
-          console.log('[Withdraw] Token0 calculated transfer fee:', transferFee0)
-        } else {
-          console.log('[Withdraw] Token0 is standard SPL, no transfer fee')
+
+      const grossAmount0 = Math.floor(removeAmount0 * 10 ** pool.mintDecimals0)
+      if (mint0Info && mint0Info.owner.equals(token2022ProgramId) && mint0Info.data.length >= 82) {
+        const feeBasisPoints = mint0Info.data.readUInt16LE(72)
+        const maxFee = Number(mint0Info.data.readBigUInt64LE(74))
+        if (feeBasisPoints > 0 && feeBasisPoints < 10000) {
+          transferFee0 = Math.floor(grossAmount0 * feeBasisPoints / 10000)
+        } else if (feeBasisPoints === 10000) {
+          transferFee0 = maxFee
         }
       }
-      
-      if (mint1Info && mint1Info.data.length >= 82) {
-        const token2022ProgramId = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
-        if (mint1Info.owner.equals(token2022ProgramId)) {
-          const feeBasisPoints = mint1Info.data.readUInt16LE(72)
-          const maxFee = Number(mint1Info.data.readBigUInt64LE(74))
-          const grossAmount1 = Math.floor(removeAmount1 * 10 ** pool.mintDecimals1)
-          console.log('[Withdraw] Token1 transfer fee config:', {
-            feeBasisPoints,
-            maxFee,
-            grossAmount1,
-            isMaxFee: feeBasisPoints === 10000
-          })
-          if (feeBasisPoints > 0 && feeBasisPoints < 10000) {
-            transferFee1 = Math.floor(grossAmount1 * feeBasisPoints / 10000)
-          } else if (feeBasisPoints === 10000) {
-            transferFee1 = maxFee
-          }
-          console.log('[Withdraw] Token1 calculated transfer fee:', transferFee1)
-        } else {
-          console.log('[Withdraw] Token1 is standard SPL, no transfer fee')
+
+      const grossAmount1 = Math.floor(removeAmount1 * 10 ** pool.mintDecimals1)
+      if (mint1Info && mint1Info.owner.equals(token2022ProgramId) && mint1Info.data.length >= 82) {
+        const feeBasisPoints = mint1Info.data.readUInt16LE(72)
+        const maxFee = Number(mint1Info.data.readBigUInt64LE(74))
+        if (feeBasisPoints > 0 && feeBasisPoints < 10000) {
+          transferFee1 = Math.floor(grossAmount1 * feeBasisPoints / 10000)
+        } else if (feeBasisPoints === 10000) {
+          transferFee1 = maxFee
         }
       }
-      
-      // Set minimum amounts to 0 to avoid slippage check failures
-      // The program's internal calculation determines the actual amounts
-      // Our frontend estimates can't match the program's exact tick math
-      console.log('[Withdraw] Setting min amounts to 0 to avoid slippage check failures')
-      
-      const amount0Min = new BN(0)
-      const amount1Min = new BN(0)
+
+      // Accounting for transfer fees + 1% slippage to absorb precise tick math mismatches
+      const amount0Min = new BN(Math.max(0, Math.floor((grossAmount0 - transferFee0) * 0.99)))
+      const amount1Min = new BN(Math.max(0, Math.floor((grossAmount1 - transferFee1) * 0.99)))
 
       const poolPda = new PublicKey(pool.poolPda)
       const tickSpacing = pool.tickSpacing

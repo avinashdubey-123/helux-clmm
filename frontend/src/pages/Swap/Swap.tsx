@@ -313,6 +313,7 @@ export default function Swap() {
     token0: number;
     token1: number;
   } | null>(null);
+  const [fetchingBalances, setFetchingBalances] = useState(false);
   const [insufficientLiquidity, setInsufficientLiquidity] = useState(false);
 
   const parseHumanAmountToBaseUnits = (value: string, decimals: number) => {
@@ -584,6 +585,7 @@ export default function Swap() {
 
     let mounted = true;
     const fetchBalances = async () => {
+      setFetchingBalances(true);
       try {
         const originalPool = poolsData.find(
           (p) => p.poolPda === activePool.poolPda,
@@ -698,6 +700,10 @@ export default function Swap() {
         }
       } catch (e) {
         console.error("Error fetching balances:", e);
+      } finally {
+        if (mounted) {
+          setFetchingBalances(false);
+        }
       }
     };
 
@@ -1476,7 +1482,7 @@ export default function Swap() {
   const getIconLabel = (symbol: string) => symbol.slice(0, 2).toUpperCase();
 
   const canSubmitSwap =
-    !busy && !!wallet.publicKey && hasValidSwapAmount && !activeBalanceExceeded && !isQuoting;
+    !busy && !!wallet.publicKey && hasValidSwapAmount && !activeBalanceExceeded && !isQuoting && !fetchingBalances;
 
   const slippageDecimal = slippage / 100;
   const estimatedReceived = Number(cleanAmountOut || "0");
@@ -2159,21 +2165,28 @@ export default function Swap() {
                         <button
                           type="submit"
                           className={`swap-btn-full ${activeBalanceExceeded ? "insufficient-balance-btn" : ""}`}
-                          disabled={loadingPools || !canSubmitSwap || insufficientLiquidity}
+                          disabled={loadingPools || !canSubmitSwap || insufficientLiquidity || fetchingBalances}
                           onClick={() => {
                             void handleSwap();
                           }}
                         >
                           {loadingPools ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <svg className="spinner" viewBox="0 0 50 50" style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }}>
+                            <span className="btn-loading-wrapper">
+                              <svg className="btn-spinner" viewBox="0 0 50 50">
                                 <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                               </svg>
                               Loading data...
                             </span>
+                          ) : fetchingBalances ? (
+                            <span className="btn-loading-wrapper">
+                              <svg className="btn-spinner" viewBox="0 0 50 50">
+                                <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                              </svg>
+                              Fetching balances...
+                            </span>
                           ) : isQuoting ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <svg className="spinner" viewBox="0 0 50 50" style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }}>
+                            <span className="btn-loading-wrapper">
+                              <svg className="btn-spinner" viewBox="0 0 50 50">
                                 <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                               </svg>
                               Calculating...

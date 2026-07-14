@@ -50,6 +50,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
   const [activeField, setActiveField] = useState<'amount0' | 'amount1'>('amount0')
   const [balance0, setBalance0] = useState(0)
   const [balance1, setBalance1] = useState(0)
+  const [fetchingBalances, setFetchingBalances] = useState(false)
   const [busy, setBusy] = useState(false)
   const [txState, setTxState] = useState<{ status: 'error', title: string, message: string, details?: string } | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
@@ -75,6 +76,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
     const mint0 = new PublicKey(pool.tokenMint0)
     const mint1 = new PublicKey(pool.tokenMint1)
     const getBalances = async () => {
+      setFetchingBalances(true)
       let programId0 = TOKEN_PROGRAM_ID
       let programId1 = TOKEN_PROGRAM_ID
       try {
@@ -89,8 +91,11 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       const ata0 = getAssociatedTokenAddressSync(mint0, publicKey, false, programId0, ASSOCIATED_TOKEN_PROGRAM_ID)
       const ata1 = getAssociatedTokenAddressSync(mint1, publicKey, false, programId1, ASSOCIATED_TOKEN_PROGRAM_ID)
 
-      getTokenBalance(connection, ata0).then(b => setBalance0(b / Math.pow(10, pool.mintDecimals0))).catch(() => setBalance0(0))
-      getTokenBalance(connection, ata1).then(b => setBalance1(b / Math.pow(10, pool.mintDecimals1))).catch(() => setBalance1(0))
+      await Promise.all([
+        getTokenBalance(connection, ata0).then(b => setBalance0(b / Math.pow(10, pool.mintDecimals0))).catch(() => setBalance0(0)),
+        getTokenBalance(connection, ata1).then(b => setBalance1(b / Math.pow(10, pool.mintDecimals1))).catch(() => setBalance1(0))
+      ])
+      setFetchingBalances(false)
     }
 
     getBalances()
@@ -481,10 +486,10 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
 
           <button
             className={`portfolio-btn modal-submit-btn ${exceedBalance ? 'insufficient-balance-btn' : ''}`}
-            disabled={busy || isCalculating || depositTotal <= 0 || exceedBalance}
+            disabled={busy || isCalculating || depositTotal <= 0 || exceedBalance || fetchingBalances}
             onClick={handleDeposit}
           >
-            {busy ? <span className="loader-dots">Processing...</span> : isCalculating ? <span className="loader-dots">Calculating...</span> : exceedBalance ? 'Insufficient balance' : 'Add Liquidity'}
+            {busy ? <span className="loader-dots">Processing...</span> : fetchingBalances ? <span className="loader-dots">Fetching balances...</span> : isCalculating ? <span className="loader-dots">Calculating...</span> : exceedBalance ? 'Insufficient balance' : 'Add Liquidity'}
           </button>
         </div>
       </div>

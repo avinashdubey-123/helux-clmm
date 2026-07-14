@@ -176,7 +176,6 @@ const fetchOnChainLiquidity = async (
         tickEntries.push({ tick, liquidityNet })
       }
     }
-    console.log(`[CLMM] Fetched ${pdas.length} tick array PDAs, ${existingCount} exist on-chain, ${tickEntries.length} initialized ticks found`)
     if (tickEntries.length === 0) {
       // If no ticks are found in the local range, the active liquidity is constant (e.g. a full range position)
       const halfSpan = tickSpacing * 14
@@ -233,7 +232,6 @@ const fetchOnChainLiquidity = async (
         d.normalizedLiquidity = Number(((d.liquidity / maxL) * 100).toFixed(2))
       })
     }
-    console.log(`[CLMM] Liquidity chart data: ${data.length} points`)
     return data
   } catch (err) {
     console.error('[CLMM] Failed to fetch tick arrays:', err)
@@ -425,6 +423,7 @@ export default function DepositForm() {
   // Fetch user balances
   const [balance0, setBalance0] = useState<number>(0)
   const [balance1, setBalance1] = useState<number>(0)
+  const [fetchingBalances, setFetchingBalances] = useState(false);
 
   useEffect(() => {
     if (!wallet.publicKey || !tokenMint0 || !tokenMint1) {
@@ -435,6 +434,7 @@ export default function DepositForm() {
     let active = true
 
     const getBalances = async () => {
+      setFetchingBalances(true)
       try {
         let programId0 = TOKEN_PROGRAM_ID
         let programId1 = TOKEN_PROGRAM_ID
@@ -465,7 +465,9 @@ export default function DepositForm() {
           setBalance0(b0)
           setBalance1(b1)
         }
-      } catch (err) { }
+      } catch (err) { } finally {
+        if (active) setFetchingBalances(false)
+      }
     }
     getBalances()
     return () => { active = false }
@@ -1378,17 +1380,24 @@ export default function DepositForm() {
                   <strong>{depositRatio}</strong>
                 </div>
               </div>
-              <button className={`deposit-submit ${exceedBalance ? 'insufficient-balance-btn' : ''}`} type="button" disabled={loadingPools || !canSubmit || busy || exceedBalance} onClick={() => { void onDeposit() }} id="deposit-submit-btn">
+              <button className={`deposit-submit ${exceedBalance ? 'insufficient-balance-btn' : ''}`} type="button" disabled={loadingPools || !canSubmit || busy || exceedBalance || fetchingBalances} onClick={() => { void onDeposit() }} id="deposit-submit-btn">
                 {loadingPools ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <svg className="spinner" viewBox="0 0 50 50" style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }}>
+                  <span className="btn-loading-wrapper">
+                    <svg className="btn-spinner" viewBox="0 0 50 50">
                       <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                     </svg>
                     Loading data...
                   </span>
+                ) : fetchingBalances ? (
+                  <span className="btn-loading-wrapper">
+                    <svg className="btn-spinner" viewBox="0 0 50 50">
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                    </svg>
+                    Fetching balances...
+                  </span>
                 ) : isCalculating ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <svg className="spinner" viewBox="0 0 50 50" style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }}>
+                  <span className="btn-loading-wrapper">
+                    <svg className="btn-spinner" viewBox="0 0 50 50">
                       <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                     </svg>
                     Calculating...

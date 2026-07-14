@@ -110,33 +110,43 @@ export default function InitializeForm() {
 
   const [balance0, setBalance0] = useState<number | null>(null)
   const [balance1, setBalance1] = useState<number | null>(null)
+  const [fetchingBalances, setFetchingBalances] = useState(false)
 
   useEffect(() => {
     let active = true;
-    const fetchBalance = async (mintAddress: string, setter: (b: number) => void) => {
+    const fetchBalance = async (mintAddress: string) => {
       if (!wallet?.publicKey || !mintAddress) {
-        setter(0);
-        return;
+        return 0;
       }
       try {
-        if (mintAddress === '11111111111111111111111111111111' || mintAddress === 'So11111111111111111111111111111111111111112' || mintAddress.toLowerCase() === 'so11111111111111111111111111111111111111112') {
+        if (mintAddress === '11111111111111111111111111111111' || mintAddress.toLowerCase() === 'so11111111111111111111111111111111111111112') {
           const bal = await connection.getBalance(wallet.publicKey);
-          if (active) setter(bal / 1e9);
+          return bal / 1e9;
         } else {
           const accounts = await connection.getParsedTokenAccountsByOwner(wallet.publicKey, { mint: new PublicKey(mintAddress) });
           if (accounts.value.length > 0) {
-            const bal = accounts.value[0].account.data.parsed.info.tokenAmount.uiAmount ?? 0;
-            if (active) setter(bal);
-          } else {
-            if (active) setter(0);
+            return accounts.value[0].account.data.parsed.info.tokenAmount.uiAmount ?? 0;
           }
         }
       } catch (e) {
-        if (active) setter(0);
+      }
+      return 0;
+    };
+
+    const loadAll = async () => {
+      setFetchingBalances(true);
+      const [b0, b1] = await Promise.all([
+        fetchBalance(mint0Address),
+        fetchBalance(mint1Address)
+      ]);
+      if (active) {
+        setBalance0(b0);
+        setBalance1(b1);
+        setFetchingBalances(false);
       }
     };
-    fetchBalance(mint0Address, setBalance0);
-    fetchBalance(mint1Address, setBalance1);
+    loadAll();
+
     return () => { active = false; };
   }, [wallet?.publicKey, mint0Address, mint1Address, connection]);
   
@@ -1013,8 +1023,15 @@ export default function InitializeForm() {
                 <button type="button" className="clmm-secondary-btn" onClick={() => goBackToStep(2)} disabled={formDisabled}>
                   Back to range
                 </button>
-                <button type="button" className="clmm-primary-btn" onClick={handleCreatePoolDesign} disabled={formDisabled || txStatus?.status === 'info' || hasInsufficientBalance}>
-                  {hasInsufficientBalance ? 'Insufficient balance' : (txStatus?.status === 'info' ? 'Processing...' : 'Create pool')}
+                <button type="button" className="clmm-primary-btn" onClick={handleCreatePoolDesign} disabled={formDisabled || txStatus?.status === 'info' || hasInsufficientBalance || fetchingBalances}>
+                  {fetchingBalances ? (
+                    <span className="btn-loading-wrapper">
+                      <svg className="btn-spinner" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                      </svg>
+                      Fetching balances...
+                    </span>
+                  ) : hasInsufficientBalance ? 'Insufficient balance' : (txStatus?.status === 'info' ? 'Processing...' : 'Create pool')}
                 </button>
               </div>
             </div>
