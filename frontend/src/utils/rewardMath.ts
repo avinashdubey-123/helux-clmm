@@ -15,9 +15,11 @@ function freshGlobalGrowth(
   lastUpdate: number,
   emissionsPerSecX64: bigint,
   poolLiquidity: bigint,
-  nowSec: number
+  nowSec: number,
+  endTime: number
 ): bigint {
-  const elapsed = BigInt(Math.max(0, nowSec - lastUpdate));
+  const maxTime = Math.min(nowSec, endTime);
+  const elapsed = BigInt(Math.max(0, maxTime - lastUpdate));
   if (elapsed === 0n || poolLiquidity === 0n) return global;
   const added = mulDivFloor(
     elapsed * emissionsPerSecX64,
@@ -64,13 +66,20 @@ export function getRealTimePendingReward(
 
   if (!poolRewardInfo.initialized) return 0;
 
-  const globalFresh = freshGlobalGrowth(
-    BigInt(poolRewardInfo.rewardGrowthGlobalX64 || "0"),
-    poolRewardInfo.lastUpdateTime || 0,
-    BigInt(poolRewardInfo.emissionsPerSecondX64 || "0"),
-    BigInt(pool.liquidity || "0"),
-    nowSec
-  );
+  let globalFresh = BigInt(poolRewardInfo.rewardGrowthGlobalX64 || "0");
+  const lastUpdate = poolRewardInfo.lastUpdateTime || 0;
+
+  // Only calculate fresh growth if the on-chain state hasn't caught up to endTime or nowSec
+  if (lastUpdate < poolRewardInfo.endTime && lastUpdate < nowSec) {
+    globalFresh = freshGlobalGrowth(
+      globalFresh,
+      lastUpdate,
+      BigInt(poolRewardInfo.emissionsPerSecondX64 || "0"),
+      BigInt(pool.liquidity || "0"),
+      nowSec,
+      poolRewardInfo.endTime
+    );
+  }
 
   const lowerOutside = BigInt(position.lowerTickOutsideGrowthX64?.[rewardIndex] || "0");
   const upperOutside = BigInt(position.upperTickOutsideGrowthX64?.[rewardIndex] || "0");
