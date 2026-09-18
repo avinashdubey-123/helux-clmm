@@ -567,19 +567,19 @@ export default function DepositForm() {
   const upperPrice = tickToPrice(selectedUpperTick)
   const chartDomain = useMemo(() => {
     if (liquidityData.length === 0) return ['dataMin', 'dataMax']
-    const prices = liquidityData.map(d => d.price)
-    // BUG FIX: The chart must visually span far enough to show the selected pointers even if they are outside the fetched liquidity bins
-    const minP = Math.min(...prices, lowerPrice)
-    const maxP = Math.max(...prices, upperPrice)
+    
+    // Zoom the chart directly to the pointers (plus 25% padding)
+    // Ignore the extremities of the fetched liquidity data so it doesn't artificially zoom out.
+    const minP = lowerPrice
+    const maxP = upperPrice
     const maxDist = Math.max(Math.abs(currentPrice - minP), Math.abs(maxP - currentPrice))
 
-    // BUG FIX: Add 25% padding to radius so the pointers never hit the exact edge of the screen,
-    // allowing the user to seamlessly drag them infinitely outwards.
+    // Add 25% padding to radius so the pointers never hit the exact edge of the screen
     const baseRadius = maxDist === 0 ? currentPrice * 0.1 : maxDist
     const radius = (baseRadius * 1.25) / zoomLevel
 
-    const safeRadius = Math.min(radius, currentPrice * 0.99) // prevent negative prices but preserve exact symmetry
-    return [currentPrice - safeRadius, currentPrice + safeRadius]
+    // To keep the center completely stuck (perfect symmetry), we must use the same radius for both sides.
+    return [currentPrice - radius, currentPrice + radius]
   }, [liquidityData, currentPrice, zoomLevel, lowerPrice, upperPrice])
   useEffect(() => {
     const minP = priceOrientation === 'token1PerToken0' ? tickToPrice(selectedLowerTick) : tickToPrice(selectedUpperTick)
@@ -718,14 +718,28 @@ export default function DepositForm() {
       return
     }
     const rawTick = displayPriceToTick(parsedPrice)
-    const snapped = snapTickToSpacing(rawTick, tickSpacing)
-    if (priceOrientation === 'token1PerToken0') {
-      if (field === 'min') setTickLower(String(clampTick(snapped, tickSpacing, 'down')))
-      else setTickUpper(String(clampTick(snapped, tickSpacing, 'up')))
-    } else {
-      if (field === 'min') setTickUpper(String(clampTick(snapped, tickSpacing, 'up')))
-      else setTickLower(String(clampTick(snapped, tickSpacing, 'down')))
+    if (rawTick < MIN_TICK || rawTick > MAX_TICK) {
+      resetRange()
+      return
     }
+    const snapped = snapTickToSpacing(rawTick, tickSpacing)
+    let newLower = selectedLowerTick
+    let newUpper = selectedUpperTick
+    if (priceOrientation === 'token1PerToken0') {
+      if (field === 'min') newLower = clampTick(snapped, tickSpacing, 'down')
+      else newUpper = clampTick(snapped, tickSpacing, 'up')
+    } else {
+      if (field === 'min') newUpper = clampTick(snapped, tickSpacing, 'up')
+      else newLower = clampTick(snapped, tickSpacing, 'down')
+    }
+
+    if (newLower >= newUpper) {
+      resetRange()
+      return
+    }
+
+    setTickLower(String(newLower))
+    setTickUpper(String(newUpper))
   }
   // BUG FIX: Default range set only on pool load — orientation is display-only
   const hasInitializedRange = useRef(false)
@@ -778,17 +792,35 @@ export default function DepositForm() {
       const priceAtPointer = minP + pct * (maxP - minP)
       // Convert display price to tick
       const rawTick = displayPriceToTick(priceAtPointer)
+      if (rawTick < MIN_TICK || rawTick > MAX_TICK) {
+        resetRange()
+        return
+      }
       const snappedTick = snapTickToSpacing(rawTick, tickSpacing)
       const identity = dragIdentityRef.current
       if (identity === 'lower') {
         // Enforce: lower must stay below upper by at least 1 tickSpacing
         const maxAllowed = selectedUpperTick - tickSpacing
-        const clamped = clampTick(Math.min(snappedTick, maxAllowed), tickSpacing, 'down')
+        if (snappedTick > maxAllowed) {
+          resetRange()
+          setDraggingHandle(null)
+          dragIdentityRef.current = null
+          setVisualDragPct(null)
+          return
+        }
+        const clamped = clampTick(snappedTick, tickSpacing, 'down')
         setTickLower(String(clamped))
       } else {
         // Enforce: upper must stay above lower by at least 1 tickSpacing
         const minAllowed = selectedLowerTick + tickSpacing
-        const clamped = clampTick(Math.max(snappedTick, minAllowed), tickSpacing, 'up')
+        if (snappedTick < minAllowed) {
+          resetRange()
+          setDraggingHandle(null)
+          dragIdentityRef.current = null
+          setVisualDragPct(null)
+          return
+        }
+        const clamped = clampTick(snappedTick, tickSpacing, 'up')
         setTickUpper(String(clamped))
       }
     }
