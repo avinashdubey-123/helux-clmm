@@ -22,7 +22,8 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
-    "recharts": "^2.15.3"
+    "recharts": "^2.15.3",
+    "swiper": "^14.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

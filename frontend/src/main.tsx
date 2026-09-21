@@ -11,10 +11,10 @@ import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <SolanaProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <SolanaProvider>
         <App />
-      </BrowserRouter>
-    </SolanaProvider>
+      </SolanaProvider>
+    </BrowserRouter>
   </StrictMode>,
 )

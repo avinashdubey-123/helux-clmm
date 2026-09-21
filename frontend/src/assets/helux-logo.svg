@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="1400 650 2000 2000">
   <defs>
-    <!-- Smooth cyan/blue/pink gradient matching the reference -->
+    <!-- Helux golden-pollen brand color -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#39d0d8" />
-      <stop offset="50%" stop-color="#2b6cb0" />
-      <stop offset="100%" stop-color="#f700ff" />
+      <stop offset="0%" stop-color="#FFD166" />
+      <stop offset="50%" stop-color="#FFD166" />
+      <stop offset="100%" stop-color="#FFD166" />
     </linearGradient>
 
     <!-- Mask to extract the 'H' shape from the negative space -->

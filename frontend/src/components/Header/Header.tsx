@@ -29,7 +29,7 @@ export default function Header() {
         </NavLink>
         <nav className="rcs-nav">
           <NavLink to='/swap' className="rcs-nav__item">Swap</NavLink>
-          <NavLink to='/' className="rcs-nav__item" end>Liquidity</NavLink>
+          <NavLink to='/liquidity' className="rcs-nav__item" end>Liquidity</NavLink>
           <NavLink to='/portfolio' className="rcs-nav__item">Portfolio</NavLink>
           {isAdmin && <NavLink to='/admin' className="rcs-nav__item">Admin</NavLink>}
         </nav>

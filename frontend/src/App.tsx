@@ -14,18 +14,22 @@ import { PositionsProvider } from './contexts/PositionsContext'
 import { TxProvider } from './contexts/TxContext'
 
 import { TokenRegistryProvider } from './contexts/TokenRegistryContext'
+import About from './pages/About/About'
+import { useLocation } from 'react-router-dom'
 
 function App() {
+  const location = useLocation()
 
   return (
     <TokenRegistryProvider>
       <TxProvider>
         <PoolsProvider>
           <PositionsProvider>
-            <Header />
+            {location.pathname !== '/' && <Header />}
             <main>
               <Routes>
-                <Route path='/' element={<Liquidity />} />
+                <Route path='/' element={<About />} />
+                <Route path='/liquidity' element={<Liquidity />} />
                 <Route path='/swap' element={<Swap />} />
                 <Route path='/liquidity/create' element={<InitializeForm />} />
                 <Route path='/liquidity/create-farm' element={<CreateFarm />} />

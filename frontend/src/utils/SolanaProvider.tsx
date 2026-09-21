@@ -8,6 +8,7 @@ import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { clusterApiUrl, Connection } from "@solana/web3.js";
+import { useLocation } from "react-router-dom";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 let lastLoggedEndpoint: string | null = null;
@@ -21,6 +22,9 @@ interface SolanaProviderProps {
 
 export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   const network = WalletAdapterNetwork.Devnet;
+  const location = useLocation();
+  const fallbackEndpoint = clusterApiUrl(network);
+  const isLandingPage = location.pathname === "/";
   const wallets = useMemo(() => {
     const injected = typeof window !== 'undefined' && (window as any).solana && (window as any).solana.isPhantom
     if (injected) return [] as any
@@ -30,6 +34,12 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   const [activeEndpoint, setActiveEndpoint] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLandingPage) {
+      setActiveEndpoint(null);
+      return;
+    }
+
+    let cancelled = false;
     const verifyEndpoint = async (url: string) => {
       try {
         const response = await fetch(url, {
@@ -61,14 +71,18 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
         const envEndpoint = envEndpointRaw.startsWith('http') ? envEndpointRaw : `https://${envEndpointRaw}`;
         const healthy = await verifyEndpoint(envEndpoint);
         if (healthy) {
-          setActiveEndpoint(envEndpoint);
+          if (!cancelled) setActiveEndpoint(envEndpoint);
           return;
         }
         console.warn(`[SolanaProvider] RPC endpoint failed health check, falling back to devnet.`);
       }
-      setActiveEndpoint(clusterApiUrl(network));
+      if (!cancelled) setActiveEndpoint(fallbackEndpoint);
     })();
-  }, [network]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackEndpoint, isLandingPage, network]);
 
   const connection = useMemo(() => {
     if (!activeEndpoint) return null;
@@ -93,12 +107,14 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
     }
   }, [activeEndpoint]);
 
-  if (!activeEndpoint) {
+  const endpoint = activeEndpoint ?? fallbackEndpoint;
+
+  if (!activeEndpoint && !isLandingPage) {
     return <div style={{ padding: '2rem', textAlign: 'center' }}>Connecting to Solana RPC…</div>;
   }
 
   return (
-    <ConnectionProvider endpoint={activeEndpoint}>
+    <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
