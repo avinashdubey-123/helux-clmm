@@ -76,8 +76,11 @@ export default function CollectFees() {
     const poolPda = useMemo(() => toPublicKey(poolPdaStr), [poolPdaStr])
     const type = state?.type || 'protocol'
 
+    const ADMIN_ID = new PublicKey('wE2EtwuovRxvXZoThsXhRTuCrFdAA1jTbLnJp9nfezL')
+    const isAdmin = wallet.publicKey?.equals(ADMIN_ID)
+
     const fetchPool = useCallback(async () => {
-        if (!program || !poolPda) return
+        if (!program || !poolPda || !isAdmin) return
 
         setFetching(true)
         try {
@@ -111,13 +114,21 @@ export default function CollectFees() {
         fetchPool()
     }, [fetchPool])
 
+    if (!wallet.connected) {
+        return <div className="admin-page">Please connect your wallet</div>
+    }
+
+    if (!isAdmin) {
+        return <div className="admin-page">Access Denied. You are not the admin.</div>
+    }
+
     if (!state || !state.pool || !poolPda) {
         return (
-            <div className="collect-page">
-                <div className="collect-card">
+            <div className="admin-page">
+                <div className="collect-card" style={{ maxWidth: '400px' }}>
                     <h2>Error</h2>
                     <p>No pool selected for fee collection.</p>
-                    <button className="collect-confirm" style={{ marginTop: '20px' }} onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab } })}>Back to Admin</button>
+                    <button className="collect-confirm" style={{ marginTop: '20px', width: '100%' }} onClick={() => navigate('/admin', { state: { activeTab: state?.fromTab } })}>Back to Admin</button>
                 </div>
             </div>
         )
@@ -301,7 +312,7 @@ export default function CollectFees() {
                             value={percent}
                             onChange={(e) => setPercent(Number(e.target.value))}
                             className="withdraw-slider"
-                            style={{ background: `linear-gradient(to right, #39d0d8 ${percent}%, #1a2640 ${percent}%)` }}
+                            style={{ background: `linear-gradient(to right, var(--app-accent) ${percent}%, #1a2640 ${percent}%)` }}
                         />
                         <div className="withdraw-slider-marks">
                             <span onClick={() => setPercent(0)}>0%</span>

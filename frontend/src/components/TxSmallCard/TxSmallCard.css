@@ -2,10 +2,10 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  background: #131c2e;
+  background: var(--app-surface);
   border-radius: 12px;
   padding: 16px 20px 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 20px var(--app-shadow-soft);
   z-index: 9999;
   width: 320px;
   animation: slideIn 0.3s ease-out forwards;
@@ -19,11 +19,11 @@
 }
 
 .tx-card-toast--success {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--app-success);
 }
 
 .tx-card-toast--error {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--app-error);
 }
 
 .tx-card-toast--info {
@@ -44,7 +44,7 @@
 
 .tx-card-header h4 {
   margin: 0;
-  color: #e6f0ff;
+  color: var(--app-ink);
   font-size: 16px;
   text-align: center;
 }
@@ -52,24 +52,24 @@
 .tx-card-close {
   background: none;
   border: none;
-  color: #7a8fa6;
+  color: var(--app-muted);
   cursor: pointer;
   font-size: 14px;
   padding: 4px;
 }
 
 .tx-card-close:hover {
-  color: #e6f0ff;
+  color: var(--app-ink);
 }
 
 .tx-card-desc {
   margin: 0 0 12px;
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 14px;
 }
 
 .tx-card-link {
-  color: #9945ff;
+  color: var(--app-rose);
   font-size: 13px;
   text-decoration: none;
   font-weight: bold;
@@ -77,6 +77,27 @@
 
 .tx-card-link:hover {
   text-decoration: underline;
+}
+
+.tx-card-details { margin-top: 8px; }
+.tx-card-details-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tx-card-link-color);
+  cursor: pointer;
+  font-size: 13px;
+}
+.tx-card-details-content {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--app-shadow-soft);
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .tx-card-timer-bar {
@@ -97,12 +118,12 @@
 }
 
 .tx-card-toast--success .tx-card-timer-bar {
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, var(--app-success), var(--app-success));
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
 }
 
 .tx-card-toast--error .tx-card-timer-bar {
-  background: linear-gradient(90deg, #ef4444, #f87171);
+  background: linear-gradient(90deg, var(--app-error), var(--app-error));
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
 }
 

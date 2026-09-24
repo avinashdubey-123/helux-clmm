@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import './TxSmallCard.css'
 
 export const CARD_LIFETIME_MS = 12000
@@ -8,8 +9,8 @@ interface TxSmallCardProps {
   status: 'success' | 'error' | 'info'
   title: string
   description: string
-  signature: string | null
-  details?: string
+  signature?: string | null
+  details?: string | null
   onClose: () => void
 }
 
@@ -31,7 +32,7 @@ const TxSmallCard: React.FC<TxSmallCardProps> = ({ status, title, description, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return (
+  return createPortal(
     <div 
       className={`tx-card-toast tx-card-toast--${status} ${isClosing ? 'tx-card-toast--closing' : ''}`}
       style={{
@@ -46,25 +47,15 @@ const TxSmallCard: React.FC<TxSmallCardProps> = ({ status, title, description, s
       </div>
       <p className="tx-card-desc">{description}</p>
       {details && (
-        <div className="tx-card-details" style={{ marginTop: '8px' }}>
+        <div className="tx-card-details">
           <button 
             onClick={() => setShowDetails(!showDetails)} 
-            style={{ background: 'none', border: 'none', color: 'var(--tx-card-link-color)', cursor: 'pointer', fontSize: '13px', padding: 0 }}
+            className="tx-card-details-toggle"
           >
             {showDetails ? 'Hide Details ▲' : 'Show Details ▼'}
           </button>
           {showDetails && (
-            <pre style={{ 
-              marginTop: '8px', 
-              padding: '8px', 
-              background: 'rgba(0,0,0,0.2)', 
-              borderRadius: '4px', 
-              fontSize: '11px', 
-              whiteSpace: 'pre-wrap', 
-              wordBreak: 'break-all',
-              maxHeight: '150px',
-              overflowY: 'auto'
-            }}>
+            <pre className="tx-card-details-content">
               {details}
             </pre>
           )}
@@ -80,7 +71,8 @@ const TxSmallCard: React.FC<TxSmallCardProps> = ({ status, title, description, s
           View on Explorer ↗
         </a>
       )}
-    </div>
+    </div>,
+    document.body
   )
 }
 

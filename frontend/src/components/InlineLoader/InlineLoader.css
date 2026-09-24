@@ -1,6 +1,6 @@
 .lp-loading-more-row td {
   padding: 14px 20px;
-  border-top: 1px dashed rgba(57, 208, 216, 0.12);
+  border-top: 1px dashed var(--app-accent-soft);
   text-align: center;
 }
 
@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #4a5a70;
+  color: var(--app-muted);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.03em;
@@ -43,7 +43,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #39d0d8;
+  background: var(--app-accent);
   animation-timing-function: cubic-bezier(0, 1, 1, 0);
 }
 .inline-loader div:nth-child(1) {

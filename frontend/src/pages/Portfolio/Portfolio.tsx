@@ -1,4 +1,5 @@
 import { useRef, useState, useMemo, useEffect } from 'react'
+import type { CSSProperties } from 'react'
 import './Portfolio.css'
 import { usePositions, getTokensFromLiquidity, PositionRowData } from '../../hooks/usePositions'
 import { usePools, PoolRowData } from '../../contexts/PoolsContext'
@@ -54,13 +55,13 @@ function PoolIconHover({ pool, t0Name, t1Name, t0Color, t1Color }: { pool: PoolR
   }
 
   return (
-    <div className="deposit-hover-wrapper" onMouseEnter={showHover} onMouseLeave={hideHover} style={{ cursor: 'pointer' }}>
+    <div className="deposit-hover-wrapper" onMouseEnter={showHover} onMouseLeave={hideHover}>
       <div className="pool-icons">
-        <div className="pool-icon pool-icon-primary" style={{ background: t0Color }}>{t0Name.slice(0, 2)}</div>
-        <div className="pool-icon pool-icon-secondary" style={{ background: t1Color }}>{t1Name.slice(0, 2)}</div>
+        <div className="pool-icon pool-icon-primary" style={{ '--pool-icon-color': t0Color } as CSSProperties}>{t0Name.slice(0, 2)}</div>
+        <div className="pool-icon pool-icon-secondary" style={{ '--pool-icon-color': t1Color } as CSSProperties}>{t1Name.slice(0, 2)}</div>
       </div>
       {hoverVisible && (
-        <div className="deposit-hover-card" style={{ left: '0', top: '35px', zIndex: 100 }}>
+        <div className="deposit-hover-card deposit-hover-card-portfolio">
           <div className="deposit-hover-row">
             <span><strong>Pool id:</strong> {pool.poolPda ?? 'unknown'}</span>
             <button className="deposit-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(pool.poolPda, 'pool') }}>
@@ -472,7 +473,7 @@ export default function Portfolio() {
                   tokenStats.map(stat => (
                     <div key={stat.tokenName} className="portfolio-token-row">
                       <div className="token-row-left">
-                        <div className="pool-icon" style={{ background: addressToColor(stat.tokenName) }}>
+                        <div className="pool-icon" style={{ '--pool-icon-color': addressToColor(stat.tokenName) } as CSSProperties}>
                           {stat.tokenName.slice(0, 2)}
                         </div>
                         <strong className="token-name-strong">{stat.tokenName}</strong>
@@ -612,23 +613,32 @@ export default function Portfolio() {
                                 className="portfolio-position-summary"
                                 onClick={() => togglePosition(pos.positionPda)}
                               >
-                                <div className="position-status-container">
+                                <div className="position-status-top">
                                   <span className={`position-status-badge ${inRange ? 'in-range' : 'out-range'}`}>
                                     <span className="status-dot"></span>
                                     {inRange ? 'In Range' : 'Out of Range'}
                                   </span>
-                                  <span className="position-range-text">
-                                    {formatAmount(lowerPrice)} - {formatAmount(upperPrice)} {t1Name} per {t0Name}
+                                </div>
+
+                                <div className="position-range-col position-summary-field">
+                                  <span className="position-mobile-label">Price Range</span>
+                                  <span className="position-range-nos">
+                                    {formatAmount(lowerPrice)} - {formatAmount(upperPrice)}
+                                  </span>
+                                  <span className="position-range-tokens">
+                                    {t1Name} per {t0Name}
                                   </span>
                                 </div>
 
-                                <div className="position-amounts-center">
+                                <div className="position-amounts-center position-summary-field">
+                                  <span className="position-mobile-label">Amounts</span>
                                   <span>{formatAmount(amount0)} {t0Name}</span>
                                   <span className="position-amount-divider">|</span>
                                   <span>{formatAmount(amount1)} {t1Name}</span>
                                 </div>
 
-                                <div className="position-actions-right">
+                                <div className="position-actions-right position-summary-field">
+                                  <span className="position-mobile-label">Actions</span>
                                   <button className="pos-btn pos-btn-deposit" onClick={(e) => {
                                     e.stopPropagation()
                                     setSelectedPosition({ pool, position: pos })
@@ -650,7 +660,20 @@ export default function Portfolio() {
                                   <div className="pos-details-left">
                                     {pos.rewardInfos.some((_, i) => {
                                       const poolRewardInfo = pool.rewardInfos?.[i];
-                                      return poolRewardInfo?.initialized && poolRewardInfo.tokenMint !== "11111111111111111111111111111111";
+                                      if (!poolRewardInfo?.initialized || poolRewardInfo.tokenMint === "11111111111111111111111111111111") return false;
+
+                                      const amount = getRealTimePendingReward(pos, pool, i, nowSec);
+                                      const rewardValue = amount / Math.pow(10, poolRewardInfo.tokenDecimals ?? 6);
+                                      
+                                      const currentNow = Math.floor(Date.now() / 1000);
+                                      const isFarmStarted = poolRewardInfo.openTime <= currentNow;
+                                      const isFarmEnded = poolRewardInfo.endTime <= currentNow;
+                                      const isActive = isFarmStarted && !isFarmEnded;
+
+                                      // Only show active rewards or rewards that aren't collected
+                                      if (!isActive && rewardValue === 0) return false;
+                                      
+                                      return true;
                                     }) ? (
                                       <>
                                         <div className="pos-details-label">Pending Rewards</div>
@@ -662,14 +685,19 @@ export default function Portfolio() {
                                             // Hide uninitialized farms
                                             if (!poolRewardInfo?.initialized || poolRewardInfo.tokenMint === "11111111111111111111111111111111") return null;
                                             
+                                            const currentNow = Math.floor(Date.now() / 1000);
+                                            const isFarmStarted = poolRewardInfo.openTime <= currentNow;
+                                            const isFarmEnded = poolRewardInfo.endTime <= currentNow;
+                                            const isActive = isFarmStarted && !isFarmEnded;
+                                            
+                                            const rewardValue = amount / Math.pow(10, poolRewardInfo.tokenDecimals ?? 6);
+                                            
+                                            // Only show active rewards or rewards that aren't collected
+                                            if (!isActive && rewardValue === 0) return null;
+
                                             const farmTokenName = poolRewardInfo.tokenMint.slice(0, 4).toUpperCase();
 
                                             let displayAmount = "0.00";
-                                            const rewardValue = amount / Math.pow(10, poolRewardInfo.tokenDecimals ?? 6);
-                                            
-                                            const currentNow = Math.floor(Date.now() / 1000);
-                                            const isFarmStarted = poolRewardInfo.openTime <= currentNow;
-                                            
                                             if ((rewardValue > 0 && rewardValue < 0.1) || (rewardValue === 0 && pos.liquidity !== '0' && isFarmStarted)) {
                                               displayAmount = "<0.1";
                                             } else {

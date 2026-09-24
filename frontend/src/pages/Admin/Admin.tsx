@@ -95,19 +95,19 @@ function PoolDisplay({ poolAddr, token0, token1 }: { poolAddr: string; token0?: 
         {hoverInfo && (
           <div className="lp-hover-card">
             <div className="lp-hover-row">
-              <span><strong>Pool id:</strong> {hoverInfo.poolId ?? 'unknown'}</span>
+              <span><strong>Pool id:</strong> {hoverInfo.poolId ? `${hoverInfo.poolId.slice(0, 6)}...${hoverInfo.poolId.slice(-6)}` : 'unknown'}</span>
               <button className="lp-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(hoverInfo.poolId, 'pool') }} title="Copy pool id">
                 {copiedKey === 'pool' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
               </button>
             </div>
             <div className="lp-hover-row">
-              <span><strong>token0:</strong> {hoverInfo.token0 ?? '-'}</span>
+              <span><strong>token0:</strong> {hoverInfo.token0 ? `${hoverInfo.token0.slice(0, 6)}...${hoverInfo.token0.slice(-6)}` : '-'}</span>
               <button className="lp-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(hoverInfo.token0, 'token0') }} title="Copy token0">
                 {copiedKey === 'token0' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
               </button>
             </div>
             <div className="lp-hover-row">
-              <span><strong>token1:</strong> {hoverInfo.token1 ?? '-'}</span>
+              <span><strong>token1:</strong> {hoverInfo.token1 ? `${hoverInfo.token1.slice(0, 6)}...${hoverInfo.token1.slice(-6)}` : '-'}</span>
               <button className="lp-copy-btn" onClick={(e) => { e.stopPropagation(); copyText(hoverInfo.token1, 'token1') }} title="Copy token1">
                 {copiedKey === 'token1' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
               </button>
@@ -135,7 +135,7 @@ function AdminAddress({ address }: { address: string }) {
     setTimeout(() => setCopied(false), 1500)
   }
 
-  const short = `${address.slice(0, 6)}...${address.slice(-6)}`
+  const short = `${address.slice(0, 2)}...${address.slice(-2)}`
 
   return (
     <span
@@ -158,6 +158,8 @@ const Admin = () => {
 
   const navigate = useNavigate()
   const location = useLocation()
+  const isAdmin = wallet.publicKey?.equals(ADMIN_ID)
+
   const [activeTab, setActiveTabState] = useState<'config' | 'operation' | 'token2022' | 'pools' | 'fees'>(() => {
     return (sessionStorage.getItem('adminTab') as any) || 'config'
   })
@@ -190,6 +192,7 @@ const Admin = () => {
   const [expandedConfigs, setExpandedConfigs] = useState<Set<string>>(new Set())
   const [updateParams, setUpdateParams] = useState<Record<string, string>>({})
   const [updateValues, setUpdateValues] = useState<Record<string, string>>({})
+  const [openConfigDropdown, setOpenConfigDropdown] = useState<string | null>(null)
 
   // Pool state management
   const [pools, setPools] = useState<any[]>(() => cachedPools || [])
@@ -266,14 +269,14 @@ const Admin = () => {
 
   // Initialize data on program load - only once
   useEffect(() => {
-    if (!program) return
+    if (!program || !isAdmin) return
     if (!initialFetchStarted) {
       initialFetchStarted = true
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [program])
+  }, [program, isAdmin])
 
   // Refetch pools when returning from CollectFees after a successful collection
   useEffect(() => {
@@ -585,8 +588,6 @@ const Admin = () => {
     .filter((key: any) => key && key.toBase58 && key.toBase58() !== DEFAULT_PUBKEY)
     .map((key: any) => key.toBase58())
 
-  const isAdmin = wallet.publicKey?.equals(ADMIN_ID)
-
   if (!wallet.connected) {
     return <div className="admin-page">Please connect your wallet</div>
   }
@@ -598,8 +599,10 @@ const Admin = () => {
   return (
     <div className="admin-page">
       <div className="admin-hero">
-        <h1 className='admin-title'>Admin Dashboard</h1>
-        <p>Manage AMM configurations, whitelists, and collect fees.</p>
+        <div className="admin-hero-left">
+          <h1 className='admin-title'>Admin Dashboard</h1>
+          <p className="admin-subtitle">Manage AMM configurations, whitelists, and collect fees.</p>
+        </div>
       </div>
 
       <div className="admin-tabs">
@@ -694,15 +697,15 @@ const Admin = () => {
                       <div
                         className={`admin-grid-row configs-grid ${isExpanded ? 'expanded' : ''}`}
                       >
-                        <div className="admin-grid-cell center">{c.index}</div>
-                        <div className="admin-grid-cell center">{tickSpacing}</div>
-                        <div className="admin-grid-cell center">{c.tradeFeeRate.toString()}</div>
-                        <div className="admin-grid-cell center">{c.protocolFeeRate.toString()}</div>
-                        <div className="admin-grid-cell center">{c.fundFeeRate.toString()}</div>
-                        <div className="admin-grid-cell center" title={protocolOwner}>{protocolOwner ? <AdminAddress address={protocolOwner} /> : '-'}</div>
-                        <div className="admin-grid-cell center" title={fundOwner}>{fundOwner ? <AdminAddress address={fundOwner} /> : '-'}</div>
-                        <div className="admin-grid-cell center" title={configAddr}><AdminAddress address={configAddr} /></div>
-                        <div className="admin-grid-cell center">
+                        <div className="admin-grid-cell center" data-label="Index">{c.index}</div>
+                        <div className="admin-grid-cell center" data-label="Tick Spacing">{tickSpacing}</div>
+                        <div className="admin-grid-cell center" data-label="Trade Fee">{c.tradeFeeRate.toString()}</div>
+                        <div className="admin-grid-cell center" data-label="Protocol Fee">{c.protocolFeeRate.toString()}</div>
+                        <div className="admin-grid-cell center" data-label="Fund Fee">{c.fundFeeRate.toString()}</div>
+                        <div className="admin-grid-cell center" data-label="Protocol Owner" title={protocolOwner}>{protocolOwner ? <AdminAddress address={protocolOwner} /> : '-'}</div>
+                        <div className="admin-grid-cell center" data-label="Fund Owner" title={fundOwner}>{fundOwner ? <AdminAddress address={fundOwner} /> : '-'}</div>
+                        <div className="admin-grid-cell center" data-label="Address" title={configAddr}><AdminAddress address={configAddr} /></div>
+                        <div className="admin-grid-cell center admin-grid-cell-expand">
                           <button className="position-expand" type="button" onClick={() => {
                             const newExpanded = new Set(expandedConfigs)
                             if (newExpanded.has(configAddr)) newExpanded.delete(configAddr)
@@ -718,18 +721,31 @@ const Admin = () => {
                           <div className="pool-controls-content">
                             <p className="pool-controls-title">Update Configuration</p>
                             <div className="admin-form" style={{ marginBottom: 0 }}>
-                              <div className="admin-field">
+                              <div className="admin-field" style={{ position: "relative", zIndex: openConfigDropdown === configAddr ? 10 : 1 }}>
                                 <label>Parameter</label>
-                                <select
-                                  value={updateParams[configAddr] ?? '0'}
-                                  onChange={(e) => setUpdateParams(prev => ({ ...prev, [configAddr]: e.target.value }))}
+                                <div 
+                                  className={`admin-select-input ${openConfigDropdown === configAddr ? 'open' : ''}`}
+                                  onClick={() => setOpenConfigDropdown(openConfigDropdown === configAddr ? null : configAddr)}
                                 >
-                                  <option value="0">Trade Fee Rate</option>
-                                  <option value="1">Protocol Fee Rate</option>
-                                  <option value="2">Fund Fee Rate</option>
-                                  <option value="3">New Protocol Owner (Address)</option>
-                                  <option value="4">New Fund Owner (Address)</option>
-                                </select>
+                                  <span>{['Trade Fee Rate', 'Protocol Fee Rate', 'Fund Fee Rate', 'New Protocol Owner (Address)', 'New Fund Owner (Address)'][parseInt(updateParams[configAddr] ?? '0')] || 'Trade Fee Rate'}</span>
+                                  <svg className={`admin-select-caret ${openConfigDropdown === configAddr ? 'open' : ''}`} viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5H7z" /></svg>
+                                </div>
+                                {openConfigDropdown === configAddr && (
+                                  <div className="admin-select-dropdown">
+                                    {['Trade Fee Rate', 'Protocol Fee Rate', 'Fund Fee Rate', 'New Protocol Owner (Address)', 'New Fund Owner (Address)'].map((label, idx) => (
+                                      <div
+                                        key={idx}
+                                        className={`admin-select-option ${(updateParams[configAddr] ?? '0') === idx.toString() ? 'selected' : ''}`}
+                                        onClick={() => {
+                                          setUpdateParams(prev => ({ ...prev, [configAddr]: idx.toString() }));
+                                          setOpenConfigDropdown(null);
+                                        }}
+                                      >
+                                        {label}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                               <div className="admin-field">
                                 <label>New Value</label>
@@ -972,8 +988,8 @@ const Admin = () => {
               return (
                 <React.Fragment key={poolAddr}>
                   <div className={`admin-grid-row pools-grid ${isExpanded ? 'expanded' : ''}`} onClick={() => togglePoolExpansion(poolAddr, p.status)}>
-                    <div className="admin-grid-cell pool-cell"><PoolDisplay poolAddr={poolAddr} token0={p.tokenMint0?.toBase58()} token1={p.tokenMint1?.toBase58()} /></div>
-                    <div className="admin-grid-cell center">
+                    <div className="admin-grid-cell pool-cell" data-label="Pool"><PoolDisplay poolAddr={poolAddr} token0={p.tokenMint0?.toBase58()} token1={p.tokenMint1?.toBase58()} /></div>
+                    <div className="admin-grid-cell center" data-label="Status">
                       <div className="admin-pool-status-group">
                         <span className={`status-indicator ${(p.status & 1) === 0 ? 'enabled' : 'disabled'}`}>
                           Dep
@@ -986,8 +1002,8 @@ const Admin = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="admin-grid-cell center"><AdminAddress address={p.ammConfig.toBase58()} /></div>
-                    <div className="admin-grid-cell center">
+                    <div className="admin-grid-cell center" data-label="Config"><AdminAddress address={p.ammConfig.toBase58()} /></div>
+                    <div className="admin-grid-cell center admin-grid-cell-expand">
                       <button
                         className="position-expand"
                         type="button"
@@ -1083,14 +1099,14 @@ const Admin = () => {
             </div>
             {pools.map((p) => (
               <div className="admin-grid-row fees-grid" key={p.publicKey.toBase58()}>
-                <div className="admin-grid-cell pool-cell"><PoolDisplay poolAddr={p.publicKey.toBase58()} token0={p.tokenMint0?.toBase58()} token1={p.tokenMint1?.toBase58()} /></div>
-                <div className="admin-grid-cell center">
+                <div className="admin-grid-cell pool-cell" data-label="Pool"><PoolDisplay poolAddr={p.publicKey.toBase58()} token0={p.tokenMint0?.toBase58()} token1={p.tokenMint1?.toBase58()} /></div>
+                <div className="admin-grid-cell center" data-label="Protocol Fees">
                   {((Number(p.protocolFeesToken0 || p.protocolFees0 || 0)) / Math.pow(10, p.mintDecimals0 || 6)).toFixed(4)} / {((Number(p.protocolFeesToken1 || p.protocolFees1 || 0)) / Math.pow(10, p.mintDecimals1 || 6)).toFixed(4)}
                 </div>
-                <div className="admin-grid-cell center">
+                <div className="admin-grid-cell center" data-label="Fund Fees">
                   {((Number(p.fundFeesToken0 || p.fundFees0 || 0)) / Math.pow(10, p.mintDecimals0 || 6)).toFixed(4)} / {((Number(p.fundFeesToken1 || p.fundFees1 || 0)) / Math.pow(10, p.mintDecimals1 || 6)).toFixed(4)}
                 </div>
-                <div className="admin-grid-cell center">
+                <div className="admin-grid-cell center" data-label="Actions">
                   <div className="admin-actions" style={{ marginTop: 0, justifyContent: 'center' }}>
                     <button className="admin-btn admin-btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }} onClick={() => {
                       navigate('/admin/collect-fees', {

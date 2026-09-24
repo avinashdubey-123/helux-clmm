@@ -1,0 +1,252 @@
+/* LiquidityChart.css */
+
+.liq-chart-container {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border-radius: 0;
+  width: 100%;
+}
+
+.liq-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.liq-chart-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.liq-chart-title strong {
+  font-size: 14px;
+  color: var(--app-ink);
+  font-weight: 600;
+}
+
+.liq-chart-title span {
+  font-size: 12px;
+  color: var(--app-muted);
+}
+
+.liq-zoom-controls {
+  display: flex;
+  gap: 6px;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.liq-zoom-btn {
+  background: transparent;
+  border: none;
+  color: var(--app-muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.liq-zoom-btn:hover {
+  background: var(--form-bg-hover);
+  color: var(--app-ink);
+}
+
+.liq-zoom-btn:active {
+  background: var(--app-border);
+}
+
+.liq-zoom-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.liq-chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  margin-bottom: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Handles */
+.liq-range-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0px; /* Centered on the exact pixel */
+  z-index: 10;
+  touch-action: none;
+}
+
+.liq-range-handle-hitarea {
+  position: absolute;
+  top: 0;
+  bottom: 24px; /* Stop above x-axis */
+  left: -16px;
+  width: 32px;
+  cursor: ew-resize;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.liq-range-handle-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  background: var(--app-accent);
+  box-shadow: 0 0 8px var(--app-accent-soft);
+  transition: width 0.1s;
+}
+
+.liq-range-handle-grip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 16px;
+  background: var(--app-accent);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-bg);
+  font-size: 8px;
+  box-shadow: 0 2px 6px var(--app-shadow);
+  transition: transform 0.1s;
+}
+
+.liq-range-handle-hitarea:hover .liq-range-handle-line,
+.liq-range-handle.is-dragging .liq-range-handle-line {
+  filter: brightness(1.2);
+}
+
+.liq-range-handle-hitarea:hover .liq-range-handle-grip,
+.liq-range-handle.is-dragging .liq-range-handle-grip {
+  transform: translateX(-50%) scale(1.1);
+}
+
+.liq-handle-tooltip {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--app-ink);
+  color: var(--app-bg);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 12px var(--app-shadow);
+}
+
+.liq-range-handle-hitarea:hover .liq-handle-tooltip,
+.liq-range-handle.is-dragging .liq-handle-tooltip {
+  opacity: 1;
+}
+
+.liq-handle-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: var(--app-ink) transparent transparent transparent;
+}
+
+/* Empty State */
+.liq-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-muted);
+  font-size: 13px;
+  background: rgba(var(--app-bg-rgb), 0.5);
+  backdrop-filter: blur(2px);
+  border-radius: 12px;
+  z-index: 5;
+}
+
+/* Legend */
+.liq-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
+  border-radius: 12px;
+}
+
+.liq-legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.liq-legend-item span {
+  font-size: 11px;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.liq-legend-item strong {
+  font-size: 13px;
+  color: var(--app-ink);
+}
+
+.liq-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--app-accent-border);
+  color: var(--app-accent);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.liq-toggle-btn:hover {
+  background: var(--app-accent-soft);
+}
+
+@media (max-width: 640px) {
+  .liq-chart-legend {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .liq-toggle-btn {
+    justify-content: center;
+    margin-top: 8px;
+  }
+}

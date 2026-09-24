@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import TransactionCard from '../../components/TransactionCard/TransactionCard'
+import { useNavigate } from 'react-router-dom'
+import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
 import useProgram from '../../utils/useProgram'
 import { PublicKey, SystemProgram, Keypair, SYSVAR_RENT_PUBKEY, Transaction } from '@solana/web3.js'
 import { BN } from '@coral-xyz/anchor'
@@ -72,6 +72,15 @@ const getTickArrayStartIndex = (tick: number, tickSpacing: number) => {
 }
 
 export default function InitializeForm() {
+  const navigate = useNavigate();
+  const handleGoBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/liquidity');
+    }
+  };
   const program = useProgram()
   const { connection } = useConnection()
   const wallet = useWallet()
@@ -89,6 +98,7 @@ export default function InitializeForm() {
     explorerUrl?: string
   } | null>(null)
   const [selectedFeeTier, setSelectedFeeTier] = useState('')
+  const [isFeeDropdownOpen, setIsFeeDropdownOpen] = useState(false)
   const [mint0Address, setMint0Address] = useState('')
   const [mint1Address, setMint1Address] = useState('')
   
@@ -737,7 +747,7 @@ export default function InitializeForm() {
   return (
     <div className="clmm-page">
       <div className="clmm-form-top">
-        <Link className="clmm-back-link" to="/">&lt; Back</Link>
+        <a className="clmm-back-link" onClick={handleGoBack} style={{ cursor: 'pointer' }}>&lt; Back</a>
         <div className="clmm-form-title">{stepBanner[step - 1]}</div>
       </div>
 
@@ -799,20 +809,30 @@ export default function InitializeForm() {
                   <div className="clmm-empty-state">No AMM configs found on this cluster.</div>
                 )}
 
-                <div className="clmm-select-wrapper">
-                  <select
-                    className="clmm-select-input"
-                    value={selectedFeeTier}
-                    onChange={(e) => setSelectedFeeTier(e.target.value)}
-                    disabled={formDisabled}
+                <div className="clmm-select-wrapper" style={{ position: "relative" }}>
+                  <div 
+                    className={`clmm-select-input ${isFeeDropdownOpen ? 'open' : ''} ${formDisabled ? 'disabled' : ''}`}
+                    onClick={() => { if (!formDisabled) setIsFeeDropdownOpen(!isFeeDropdownOpen); }}
                   >
-                    {ammConfigs.map((tier) => (
-                      <option key={tier.id} value={tier.id}>
-                        {tier.label}
-                      </option>
-                    ))}
-                  </select>
-                  <svg className="clmm-select-caret" viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5H7z" /></svg>
+                    <span>{ammConfigs.find(c => c.id === selectedFeeTier)?.label || "Select Fee Tier"}</span>
+                    <svg className={`clmm-select-caret ${isFeeDropdownOpen ? 'open' : ''}`} viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5H7z" /></svg>
+                  </div>
+                  {isFeeDropdownOpen && !formDisabled && (
+                    <div className="clmm-select-dropdown">
+                      {ammConfigs.map((tier) => (
+                        <div 
+                          key={tier.id}
+                          className={`clmm-select-option ${selectedFeeTier === tier.id ? 'selected' : ''}`}
+                          onClick={() => {
+                            setSelectedFeeTier(tier.id);
+                            setIsFeeDropdownOpen(false);
+                          }}
+                        >
+                          {tier.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -906,13 +926,12 @@ export default function InitializeForm() {
           {step === 3 && (
             <div className="clmm-panel clmm-panel-compact">
               {txStatus && (
-                <TransactionCard
+                <TxSmallCard
                   status={txStatus.status}
                   title={txStatus.title}
-                  message={txStatus.message}
+                  description={txStatus.message}
                   details={txStatus.details}
                   signature={txStatus.signature}
-                  explorerUrl={txStatus.explorerUrl}
                   onClose={() => setTxStatus(null)}
                 />
               )}
@@ -950,11 +969,11 @@ export default function InitializeForm() {
                       </button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(8, 17, 31, 0.4)', padding: '4px 8px', borderRadius: '8px' }}>
-                          <img src={walletIcon} alt="wallet" style={{ width: 14, height: 14, opacity: 0.7 }} />
-                          <span style={{ fontSize: '13px', color: '#a0aec0', fontWeight: 600 }}>{balance0 !== null ? balance0.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
+                          <img src={walletIcon} alt="wallet" className="clmm-wallet-icon" />
+                          <span className="clmm-balance-value">{balance0 !== null ? balance0.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
                         </div>
-                        <button type="button" onClick={() => syncDepositFromToken0(balance0 ? (balance0 / 2).toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>50%</button>
-                        <button type="button" onClick={() => syncDepositFromToken0(balance0 ? balance0.toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>MAX</button>
+                        <button type="button" onClick={() => syncDepositFromToken0(balance0 ? (balance0 / 2).toString() : '0')} style={{ background: 'var(--app-accent-soft)', border: '1px solid var(--app-accent)', color: 'var(--app-accent)', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>50%</button>
+                        <button type="button" onClick={() => syncDepositFromToken0(balance0 ? balance0.toString() : '0')} style={{ background: 'var(--app-accent-soft)', border: '1px solid var(--app-accent)', color: 'var(--app-accent)', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>MAX</button>
                       </div>
                     </div>
                     <div className={`clmm-amount-row ${isInsufficient0 ? 'clmm-insufficient-field' : ''}`}>
@@ -985,12 +1004,12 @@ export default function InitializeForm() {
                         <strong>{mint1Symbol}</strong>
                       </button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(8, 17, 31, 0.4)', padding: '4px 8px', borderRadius: '8px' }}>
-                          <img src={walletIcon} alt="wallet" style={{ width: 14, height: 14, opacity: 0.7 }} />
-                          <span style={{ fontSize: '13px', color: '#a0aec0', fontWeight: 600 }}>{balance1 !== null ? balance1.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
+                        <div className="clmm-balance-chip">
+                          <img src={walletIcon} alt="wallet" className="clmm-wallet-icon" />
+                          <span className="clmm-balance-value">{balance1 !== null ? balance1.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
                         </div>
-                        <button type="button" onClick={() => syncDepositFromToken1(balance1 ? (balance1 / 2).toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>50%</button>
-                        <button type="button" onClick={() => syncDepositFromToken1(balance1 ? balance1.toString() : '0')} style={{ background: 'rgba(78, 221, 228, 0.1)', border: '1px solid #4edde4', color: '#4edde4', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>MAX</button>
+                        <button type="button" onClick={() => syncDepositFromToken1(balance1 ? (balance1 / 2).toString() : '0')} style={{ background: 'var(--app-accent-soft)', border: '1px solid var(--app-accent)', color: 'var(--app-accent)', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>50%</button>
+                        <button type="button" onClick={() => syncDepositFromToken1(balance1 ? balance1.toString() : '0')} style={{ background: 'var(--app-accent-soft)', border: '1px solid var(--app-accent)', color: 'var(--app-accent)', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>MAX</button>
                       </div>
                     </div>
                     <div className={`clmm-amount-row ${isInsufficient1 ? 'clmm-insufficient-field' : ''}`}>

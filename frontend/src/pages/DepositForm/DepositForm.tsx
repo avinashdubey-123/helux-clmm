@@ -1,23 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { BN } from '@coral-xyz/anchor'
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { Keypair, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from '@solana/web3.js'
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, CartesianGrid
-} from 'recharts'
 import { getPositionAddress, getTickArrayAddress } from '../../utils/pda'
 import { useTransactions } from '../../contexts/TxContext'
 import { callWithRetry } from '../../utils/batchFetch'
 import useProgram from '../../utils/useProgram'
-import TransactionCard from '../../components/TransactionCard/TransactionCard'
+import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
 import copyIcon from '../../assets/copy.svg'
 import { usePools } from '../../contexts/PoolsContext'
 import { usePositions } from '../../hooks/usePositions'
 import { triggerPoolsRefetch } from '../../utils/cache'
 import walletIcon from '../../assets/wallet.svg'
+import { LiquidityChart } from '../../components/LiquidityChart/LiquidityChart'
 import './DepositForm.css'
 const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 const MIN_TICK = -443636
@@ -141,7 +138,7 @@ const fetchOnChainLiquidity = async (
   poolLiquidity: number
 ): Promise<{ tick: number; price: number; liquidity: number }[]> => {
   const tickCount = TICK_ARRAY_SIZE * Math.max(1, tickSpacing)
-  const coverageArrays = 5 // fetch 5 arrays on each side + current = up to 11 arrays
+  const coverageArrays = 15 // 15 on each side = 31 arrays total (safer for public RPCs)
   // Compute the start indices of tick arrays covering a wide range around priceTick
   const centerStart = Math.floor(priceTick / tickCount) * tickCount
   const startIndices: number[] = []
@@ -206,14 +203,25 @@ const fetchOnChainLiquidity = async (
       return Math.max(0, L)
     }
     const data: { tick: number; price: number; liquidity: number; normalizedLiquidity?: number }[] = []
-    const firstTick = Math.min(tickEntries[0].tick, priceTick - tickSpacing * 14)
-    const lastTick = Math.max(tickEntries[tickEntries.length - 1].tick, priceTick + tickSpacing * 14)
-    // Sample ticks across the visible range
-    for (let t = firstTick - tickSpacing * 4; t <= lastTick + tickSpacing * 4; t += tickSpacing) {
+    const firstTick = Math.min(tickEntries[0].tick, priceTick - tickSpacing * 14) - tickSpacing * 4
+    const lastTick = Math.max(tickEntries[tickEntries.length - 1].tick, priceTick + tickSpacing * 14) + tickSpacing * 4
+
+    // To prevent Recharts from lagging with thousands of points, only plot ticks where liquidity changes
+    const significantTicks = new Set<number>()
+    significantTicks.add(firstTick)
+    significantTicks.add(lastTick)
+    significantTicks.add(priceTick)
+    for (const entry of tickEntries) {
+      significantTicks.add(entry.tick)
+      significantTicks.add(entry.tick - 1) // Provide hard edges for step interpolation
+      significantTicks.add(entry.tick + 1)
+    }
+
+    const sortedTicks = Array.from(significantTicks).sort((a, b) => a - b)
+
+    for (const t of sortedTicks) {
       const L = getLiquidityAtTick(t)
-      // Convert raw on-chain liquidity integer to client-side UI value
       const depth = L / Math.pow(10, (decimals0 + decimals1) / 2)
-      // Formatted price for X-axis display
       const raw = Math.pow(1.0001, t) * Math.pow(10, decimals0 - decimals1)
       const price = priceOrientation === 'token1PerToken0' ? raw : (raw > 0 ? 1 / raw : 0)
       data.push({
@@ -295,32 +303,23 @@ function NftOverlay({
     </div>
   )
 }
-// ── Custom Recharts tooltip ──
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const LiquidityTooltip = ({ active, payload }: any) => {
-  if (!active || !payload?.length) return null
-  const { price, liquidity } = payload[0].payload
-  return (
-    <div className="chart-tooltip">
-      <div className="chart-tooltip-row">
-        <span>Price</span>
-        <strong>{formatAmount(price)}</strong>
-      </div>
-      <div className="chart-tooltip-row">
-        <span>Liquidity</span>
-        <strong>{liquidity.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>
-      </div>
-    </div>
-  )
-}
+
 export default function DepositForm() {
+  const navigate = useNavigate();
+  const handleGoBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/liquidity');
+    }
+  };
   const location = useLocation()
   const { refreshPools, loadingPools } = usePools()
   const { refreshPositions } = usePositions()
   const program = useProgram()
   const { connection } = useConnection()
   const wallet = useWallet()
-  const chartRef = useRef<HTMLDivElement | null>(null)
   const { addTransaction } = useTransactions()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const state = location.state as { pool?: any; poolPda?: string } | null
@@ -332,7 +331,6 @@ export default function DepositForm() {
   const [amount1, setAmount1] = useState('')
   const [tickLower, setTickLower] = useState('0')
   const [tickUpper, setTickUpper] = useState('0')
-  const [draggingHandle, setDraggingHandle] = useState<'lower' | 'upper' | null>(null)
   const [activePill, setActivePill] = useState<string | null>(null)
   const [priceOrientation, setPriceOrientation] = useState<'token1PerToken0' | 'token0PerToken1'>('token1PerToken0')
   const [feeTierLabel, setFeeTierLabel] = useState('')
@@ -540,14 +538,15 @@ export default function DepositForm() {
       : (underlyingRatio > 0 ? 1 / underlyingRatio : 0)
   }
   const displayPriceToTick = (displayPrice: number) => {
-    if (!Number.isFinite(displayPrice) || displayPrice <= 0) return 0
+    if (displayPrice <= 0) return priceOrientation === 'token1PerToken0' ? MIN_TICK : MAX_TICK
+    if (!Number.isFinite(displayPrice)) return priceOrientation === 'token1PerToken0' ? MAX_TICK : MIN_TICK
     const underlyingRatio = priceOrientation === 'token1PerToken0' ? displayPrice : 1 / displayPrice
     const tickRatio = underlyingRatio / Math.pow(10, decimals0 - decimals1)
     return Math.log(tickRatio) / Math.log(1.0001)
   }
   // ── Recharts data — real on-chain liquidity ──
   const [liquidityData, setLiquidityData] = useState<{ tick: number; price: number; liquidity: number }[]>([])
-  const [zoomLevel, setZoomLevel] = useState(1)
+
   useEffect(() => {
     if (!program || !poolPda || !connection) return
     let cancelled = false
@@ -565,22 +564,7 @@ export default function DepositForm() {
   const currentPrice = tickToPrice(priceTick)
   const lowerPrice = tickToPrice(selectedLowerTick)
   const upperPrice = tickToPrice(selectedUpperTick)
-  const chartDomain = useMemo(() => {
-    if (liquidityData.length === 0) return ['dataMin', 'dataMax']
-    
-    // Zoom the chart directly to the pointers (plus 25% padding)
-    // Ignore the extremities of the fetched liquidity data so it doesn't artificially zoom out.
-    const minP = lowerPrice
-    const maxP = upperPrice
-    const maxDist = Math.max(Math.abs(currentPrice - minP), Math.abs(maxP - currentPrice))
 
-    // Add 25% padding to radius so the pointers never hit the exact edge of the screen
-    const baseRadius = maxDist === 0 ? currentPrice * 0.1 : maxDist
-    const radius = (baseRadius * 1.25) / zoomLevel
-
-    // To keep the center completely stuck (perfect symmetry), we must use the same radius for both sides.
-    return [currentPrice - radius, currentPrice + radius]
-  }, [liquidityData, currentPrice, zoomLevel, lowerPrice, upperPrice])
   useEffect(() => {
     const minP = priceOrientation === 'token1PerToken0' ? tickToPrice(selectedLowerTick) : tickToPrice(selectedUpperTick)
     const maxP = priceOrientation === 'token1PerToken0' ? tickToPrice(selectedUpperTick) : tickToPrice(selectedLowerTick)
@@ -750,99 +734,7 @@ export default function DepositForm() {
     hasInitializedRange.current = true
   }, [pool, priceTick, currentTick, applyDefaultRange])
   // ── Drag handles: map pointer position to price-space (matching chart X axis) ──
-  const dragIdentityRef = useRef<'lower' | 'upper' | null>(null)
-  const dragOffsetRef = useRef<number>(0)
-  const [visualDragPct, setVisualDragPct] = useState<number | null>(null)
-  const [chartWidth, setChartWidth] = useState(0)
-  useEffect(() => {
-    if (chartRef.current) {
-      const observer = new ResizeObserver((entries) => {
-        setChartWidth(entries[0].contentRect.width)
-      })
-      observer.observe(chartRef.current)
-      return () => observer.disconnect()
-    }
-  }, [chartRef])
-  useEffect(() => {
-    if (!draggingHandle) {
-      dragIdentityRef.current = null
-      return
-    }
-    // Lock identity at drag start
-    if (!dragIdentityRef.current) {
-      dragIdentityRef.current = draggingHandle
-    }
-    const handlePointerMove = (event: PointerEvent) => {
-      const chart = chartRef.current
-      if (!chart || !dragIdentityRef.current) return
-      const rect = chart.getBoundingClientRect()
-      // BUG FIX: Calculate plot bounds directly from container width to avoid React render-phase state bugs
-      const plotX = 38
-      const plotWidth = chartWidth > 0 ? chartWidth - 46 : 400
-      const plotLeft = rect.left + plotX
-      if (plotWidth <= 0) return
-      const pct = Math.min(1, Math.max(0, (event.clientX - dragOffsetRef.current - plotLeft) / plotWidth))
-
-      // Update visual state smoothly
-      setVisualDragPct(pct * 100)
-      // BUG FIX: Map pointer % using the EXACT visual axis domain of the Recharts graph
-      const minP = Number(chartDomain[0])
-      const maxP = Number(chartDomain[1])
-      if (!Number.isFinite(minP) || !Number.isFinite(maxP)) return
-      const priceAtPointer = minP + pct * (maxP - minP)
-      // Convert display price to tick
-      const rawTick = displayPriceToTick(priceAtPointer)
-      if (rawTick < MIN_TICK || rawTick > MAX_TICK) {
-        resetRange()
-        return
-      }
-      const snappedTick = snapTickToSpacing(rawTick, tickSpacing)
-      const identity = dragIdentityRef.current
-      if (identity === 'lower') {
-        // Enforce: lower must stay below upper by at least 1 tickSpacing
-        const maxAllowed = selectedUpperTick - tickSpacing
-        if (snappedTick > maxAllowed) {
-          resetRange()
-          setDraggingHandle(null)
-          dragIdentityRef.current = null
-          setVisualDragPct(null)
-          return
-        }
-        const clamped = clampTick(snappedTick, tickSpacing, 'down')
-        setTickLower(String(clamped))
-      } else {
-        // Enforce: upper must stay above lower by at least 1 tickSpacing
-        const minAllowed = selectedLowerTick + tickSpacing
-        if (snappedTick < minAllowed) {
-          resetRange()
-          setDraggingHandle(null)
-          dragIdentityRef.current = null
-          setVisualDragPct(null)
-          return
-        }
-        const clamped = clampTick(snappedTick, tickSpacing, 'up')
-        setTickUpper(String(clamped))
-      }
-    }
-    const handlePointerUp = () => {
-      dragIdentityRef.current = null
-      setDraggingHandle(null)
-      setVisualDragPct(null)
-      setActivePill(null)
-    }
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-    window.addEventListener('pointercancel', handlePointerUp)
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-      window.removeEventListener('pointercancel', handlePointerUp)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draggingHandle, tickSpacing, chartDomain, selectedLowerTick, selectedUpperTick, visualDragPct, chartWidth])
-
-  // Deterministic bounding box for the chart grid (XAxis = 38px, Right Margin = 8px)
-  const activePlotBox = { x: 38, width: chartWidth > 0 ? chartWidth - 46 : 400 }
+  // Removed manual drag state and useEffects since LiquidityChart component manages it now
 
   // BUG 3 FIX: canSubmit only requires the relevant amount(s) for the deposit mode
   const canSubmit = !!program && !!wallet.publicKey && !!poolPda && !!tokenMint0 && !!tokenMint1 && !!tokenVault0 && !!tokenVault1 && !rangeIsInvalid && !isCalculating
@@ -1051,18 +943,17 @@ export default function DepositForm() {
   return (
     <div className="clmm-page">
       <div className="clmm-form-top">
-        <Link className="clmm-back-link" to="/">&lt; Back</Link>
-        <div className="clmm-form-title">Deposit into a live CLMM pool</div>
+        <a className="clmm-back-link" onClick={handleGoBack} style={{ cursor: 'pointer' }}>&lt; Back</a>
+        <div className="clmm-form-title"></div>
       </div>
 
       <div className="deposit-shell">
         {txState && (
-          <TransactionCard
+          <TxSmallCard
             status={txState.status}
             title={txState.title}
-            message={txState.message}
+            description={txState.message}
             signature={txState.signature}
-            explorerUrl={txState.explorerUrl}
             details={txState.details}
             onClose={() => setTxState(null)}
           />
@@ -1082,19 +973,19 @@ export default function DepositForm() {
               {poolHoverVisible && pool && (
                 <div className="deposit-hover-card" onMouseEnter={showPoolHover} onMouseLeave={hidePoolHover}>
                   <div className="deposit-hover-row">
-                    <span><strong>Pool id:</strong> {pool.poolPda ?? 'unknown'}</span>
+                    <span><strong>Pool id:</strong> {pool.poolPda ? `${pool.poolPda.slice(0, 6)}...${pool.poolPda.slice(-6)}` : 'unknown'}</span>
                     <button className="deposit-copy-btn" onClick={() => { void copyText(pool.poolPda, 'pool') }} title="Copy pool id" aria-label="Copy pool id">
                       {copiedKey === 'pool' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
                     </button>
                   </div>
                   <div className="deposit-hover-row">
-                    <span><strong>Token0:</strong> {tokenMint0?.toBase58() ?? '-'}</span>
+                    <span><strong>Token0:</strong> {tokenMint0 ? `${tokenMint0.toBase58().slice(0, 6)}...${tokenMint0.toBase58().slice(-6)}` : '-'}</span>
                     <button className="deposit-copy-btn" onClick={() => { void copyText(tokenMint0?.toBase58(), 'token0') }} title="Copy token0" aria-label="Copy token0">
                       {copiedKey === 'token0' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
                     </button>
                   </div>
                   <div className="deposit-hover-row">
-                    <span><strong>Token1:</strong> {tokenMint1?.toBase58() ?? '-'}</span>
+                    <span><strong>Token1:</strong> {tokenMint1 ? `${tokenMint1.toBase58().slice(0, 6)}...${tokenMint1.toBase58().slice(-6)}` : '-'}</span>
                     <button className="deposit-copy-btn" onClick={() => { void copyText(tokenMint1?.toBase58(), 'token1') }} title="Copy token1" aria-label="Copy token1">
                       {copiedKey === 'token1' ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
                     </button>
@@ -1124,157 +1015,30 @@ export default function DepositForm() {
 
             {/* ── Recharts Liquidity Depth Chart ── */}
             <div className="deposit-chart-card">
-              <div className="chart-axis-labels" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span className="chart-y-title">Liquidity Depth (on-chain)</span>
-                <div className="chart-zoom-controls" style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => setZoomLevel(z => Math.max(0.1, z - 0.25))} style={{ background: 'rgba(57, 208, 216, 0.1)', border: '1px solid rgba(57, 208, 216, 0.3)', color: '#39d0d8', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>-</button>
-                  <button type="button" onClick={() => setZoomLevel(z => z + 0.25)} style={{ background: 'rgba(57, 208, 216, 0.1)', border: '1px solid rgba(57, 208, 216, 0.3)', color: '#39d0d8', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>+</button>
-                </div>
-              </div>
-              <div className="deposit-price-chart-container" style={{ position: 'relative' }}>
-                <div className="deposit-price-chart" ref={chartRef}>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <AreaChart data={liquidityData} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
-                      <defs>
-                        <linearGradient id="liquidityGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#39d0d8" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#39d0d8" stopOpacity={0.04} />
-                        </linearGradient>
-                        <linearGradient id="selectedGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#14f195" stopOpacity={0.55} />
-                          <stop offset="100%" stopColor="#14f195" stopOpacity={0.08} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 4" stroke="rgba(60,80,120,0.3)" vertical={false} />
-                      <XAxis
-                        dataKey="price"
-                        type="number"
-                        domain={chartDomain}
-                        allowDataOverflow={true}
-                        tickFormatter={(v) => formatAmount(Number(v))}
-                        tick={{ fill: '#6a85ab', fontSize: 11 }}
-                        tickLine={false}
-                        axisLine={{ stroke: 'rgba(60,80,120,0.4)' }}
-                        label={{
-                          value: `Price (${displayBaseLabel})`,
-                          position: 'insideBottom',
-                          offset: -2,
-                          fill: '#6a85ab',
-                          fontSize: 11,
-                        }}
-                        height={44}
-                      />
-                      <YAxis
-                        tickFormatter={(v) => `${v.toFixed(0)}`}
-                        tick={{ fill: '#6a85ab', fontSize: 11 }}
-                        tickLine={false}
-                        axisLine={false}
-                        width={38}
-                      />
-                      <Tooltip content={<LiquidityTooltip />} />
+              <LiquidityChart
+                liquidityData={liquidityData}
+                currentPrice={currentPrice}
+                selectedMinPrice={Math.min(lowerPrice, upperPrice)}
+                selectedMaxPrice={Math.max(lowerPrice, upperPrice)}
+                onRangeChange={(minPrice, maxPrice) => {
+                  const tick1 = displayPriceToTick(minPrice)
+                  const tick2 = displayPriceToTick(maxPrice)
+                  const minTick = Math.min(tick1, tick2)
+                  const maxTick = Math.max(tick1, tick2)
+                  setTickLower(String(clampTick(snapTickToSpacing(minTick, tickSpacing), tickSpacing, 'down')))
+                  setTickUpper(String(clampTick(snapTickToSpacing(maxTick, tickSpacing), tickSpacing, 'up')))
+                }}
+                priceOrientation={priceOrientation}
+                displayBaseLabel={displayBaseLabel}
+                token0Name={token0Name}
+                token1Name={token1Name}
+                onToggleOrientation={handleToggleOrientation}
+                onResetZoom={() => {
 
-                      {/* Full background area */}
-                      <Area
-                        type="stepAfter"
-                        dataKey="liquidity"
-                        stroke="#39d0d8"
-                        strokeWidth={1.5}
-                        fill="url(#liquidityGrad)"
-                        dot={false}
-                        activeDot={false}
-                        isAnimationActive={false}
-                      />
-
-                      {/* Current price reference line */}
-                      <ReferenceLine
-                        x={currentPrice}
-                        stroke="#ff8fd0"
-                        strokeDasharray="4 3"
-                        strokeWidth={2}
-                        label={{
-                          value: 'Current',
-                          position: 'insideTopLeft',
-                          fill: '#ff8fd0',
-                          fontSize: 10,
-                          fontWeight: 700,
-                        }}
-                      />
-
-                      {/* Removed buggy ReferenceLine that caused React render-phase state warnings */}
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* BUG 5 FIX: Draggable handles overlaid on chart */}
-                {!rangeIsInvalid && liquidityData.length > 0 && (() => {
-                  const minP = Number(chartDomain[0])
-                  const maxP = Number(chartDomain[1])
-                  const range = maxP - minP
-                  if (range <= 0) return null
-                  const lowerPct = ((lowerPrice - minP) / range) * 100
-                  const upperPct = ((upperPrice - minP) / range) * 100
-                  const currentLowerPct = draggingHandle === 'lower' && visualDragPct !== null ? visualDragPct : lowerPct
-                  const currentUpperPct = draggingHandle === 'upper' && visualDragPct !== null ? visualDragPct : upperPct
-                  return (
-                    <>
-                      <div
-                        className="chart-drag-handle chart-drag-handle-lower"
-                        style={{ left: `${activePlotBox.x + (Math.max(0, Math.min(100, currentLowerPct)) / 100) * activePlotBox.width}px` }}
-                        onPointerDown={(e) => {
-                          e.preventDefault()
-                          setDraggingHandle('lower')
-                          if (chartRef.current) {
-                            const rect = chartRef.current.getBoundingClientRect()
-                            const clampedPct = Math.max(0, Math.min(100, lowerPct))
-                            const center = rect.left + activePlotBox.x + (clampedPct / 100) * activePlotBox.width
-                            dragOffsetRef.current = e.clientX - center
-                          }
-                        }}
-                        title={priceOrientation === 'token1PerToken0' ? `Min: ${formatAmount(lowerPrice)}` : `Max: ${formatAmount(lowerPrice)}`}
-                      >
-                        <div className="chart-drag-handle-line" />
-                        <div className="chart-drag-handle-grip">{priceOrientation === 'token1PerToken0' ? '◀' : '▶'}</div>
-                      </div>
-                      <div
-                        className="chart-drag-handle chart-drag-handle-upper"
-                        style={{ left: `${activePlotBox.x + (Math.max(0, Math.min(100, currentUpperPct)) / 100) * activePlotBox.width}px` }}
-                        onPointerDown={(e) => {
-                          e.preventDefault()
-                          setDraggingHandle('upper')
-                          if (chartRef.current) {
-                            const rect = chartRef.current.getBoundingClientRect()
-                            const clampedPct = Math.max(0, Math.min(100, upperPct))
-                            const center = rect.left + activePlotBox.x + (clampedPct / 100) * activePlotBox.width
-                            dragOffsetRef.current = e.clientX - center
-                          }
-                        }}
-                        title={priceOrientation === 'token1PerToken0' ? `Max: ${formatAmount(upperPrice)}` : `Min: ${formatAmount(upperPrice)}`}
-                      >
-                        <div className="chart-drag-handle-line" />
-                        <div className="chart-drag-handle-grip">{priceOrientation === 'token1PerToken0' ? '▶' : '◀'}</div>
-                      </div>
-                    </>
-                  )
-                })()}
-              </div>
-              {/* Empty state when no on-chain data */}
-              {liquidityData.length === 0 && (
-                <div className="chart-empty-state">No on-chain liquidity data available for this pool.</div>
-              )}
-              {/* Legend row */}
-              <div className="deposit-chart-legend">
-                <div>
-                  <span>Current Price</span>
-                  <strong>{formatAmount(tickToPrice(priceTick))} {displayBaseLabel}</strong>
-                </div>
-                <div>
-                  <span>Selected Min / Max</span>
-                  <strong>{formatAmount(tickToPrice(selectedLowerTick))} / {formatAmount(tickToPrice(selectedUpperTick))}</strong>
-                </div>
-                <button type="button" className="deposit-price-toggle" onClick={handleToggleOrientation}>
-                  {priceOrientation === 'token1PerToken0' ? `Show ${token0Name} / ${token1Name}` : `Show ${token1Name} / ${token0Name}`}
-                </button>
-              </div>
+                  resetRange()
+                  setActivePill(null)
+                }}
+              />
             </div>
             <div className="deposit-range-inputs">
               <label className="deposit-range-field">
@@ -1301,7 +1065,6 @@ export default function DepositForm() {
               <div className="deposit-panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h2>Add Deposit Amount</h2>
-                  <p>Enter token amounts for each side of the position.</p>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: priceOrientation === 'token1PerToken0' ? 'column' : 'column-reverse', gap: '16px' }}>
@@ -1380,7 +1143,7 @@ export default function DepositForm() {
                   {depositMode === 'token0Only' && (
                     <div className="deposit-token-locked-overlay">
                       <div className="deposit-token-locked-icon">
-                        <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24, filter: 'invert(1)' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
                         {!document.querySelector('img[src="/src/assets/lock.svg"]') && "🔒"}
                       </div>
                       <div className="deposit-token-locked-title">Single asset deposit only.</div>
@@ -1403,7 +1166,7 @@ export default function DepositForm() {
                       <span>{formatAmount(Number(amount1) || 0)} {token1Name}</span>
                     )}
                     {(Number(amount0) || 0) === 0 && (Number(amount1) || 0) === 0 && (
-                      <span style={{ color: '#6a85ab' }}>0 {token0Name} + 0 {token1Name}</span>
+                      <span style={{ color: 'var(--app-muted)' }}>0 {token0Name} + 0 {token1Name}</span>
                     )}
                   </strong>
                 </div>

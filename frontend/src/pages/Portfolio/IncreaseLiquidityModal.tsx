@@ -6,6 +6,7 @@ import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGR
 import { PoolRowData } from '../../contexts/PoolsContext'
 import { PositionRowData } from '../../hooks/usePositions'
 import useProgram from '../../utils/useProgram'
+import LockIcon from '../../assets/lock.svg'
 import { getTokenBalance } from '../../utils/token'
 import { useTransactions } from '../../contexts/TxContext'
 import { getTickArrayAddress, getPoolRewardVaultAddress } from '../../utils/pda'
@@ -137,7 +138,6 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       try {
         let freshTick = currentTick;
         if (pool.poolPda && program) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawPool = await (program.account as any).poolState.fetch(new PublicKey(pool.poolPda));
           const rawTick = Number(rawPool.tickCurrent?.toString?.() ?? rawPool.tick_current?.toString?.() ?? 0);
           if (rawTick !== 0) {
@@ -394,7 +394,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
         </div>
 
         <div className="portfolio-modal-body">
-          <div className={`deposit-token-card ${exceedBalance0 ? 'deposit-token-card-invalid' : ''}`} style={{ position: 'relative' }}>
+          <div className={`deposit-token-card deposit-token-card-positioned ${exceedBalance0 ? 'deposit-token-card-invalid' : ''}`}>
             <div className={depositMode === 'token1Only' ? 'is-locked-blur' : ''}>
               <div className="deposit-token-top modal-token-top-between">
                 <strong>{t0Name}</strong>
@@ -420,8 +420,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
             {depositMode === 'token1Only' && (
               <div className="portfolio-token-locked-overlay">
                 <div className="portfolio-token-locked-icon">
-                  <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24, filter: 'invert(1)' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
-                  {!document.querySelector('img[src="/src/assets/lock.svg"]')}
+                  <img src={LockIcon} className="portfolio-token-locked-icon-img" />
                 </div>
                 <div className="portfolio-token-locked-title">Single asset deposit only.</div>
                 <div className="portfolio-token-locked-desc">The market price is outside your specified price range.</div>
@@ -431,7 +430,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
 
           <div className="deposit-plus modal-deposit-plus">+</div>
 
-          <div className={`deposit-token-card ${exceedBalance1 ? 'deposit-token-card-invalid' : ''}`} style={{ position: 'relative' }}>
+          <div className={`deposit-token-card deposit-token-card-positioned ${exceedBalance1 ? 'deposit-token-card-invalid' : ''}`}>
             <div className={depositMode === 'token0Only' ? 'is-locked-blur' : ''}>
               <div className="deposit-token-top modal-token-top-between">
                 <strong>{t1Name}</strong>
@@ -457,8 +456,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
             {depositMode === 'token0Only' && (
               <div className="portfolio-token-locked-overlay">
                 <div className="portfolio-token-locked-icon">
-                  <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24, filter: 'invert(1)' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
-                  {!document.querySelector('img[src="/src/assets/lock.svg"]')}
+                  <img src={LockIcon} className="portfolio-token-locked-icon-img" />
                 </div>
                 <div className="portfolio-token-locked-title">Single asset deposit only.</div>
                 <div className="portfolio-token-locked-desc">The market price is outside your specified price range.</div>

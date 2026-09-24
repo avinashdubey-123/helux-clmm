@@ -7,8 +7,8 @@
   background: rgba(16, 25, 45, 0.94);
   border: 1px solid rgba(44, 60, 92, 0.95);
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-  color: #f4f8ff;
+  box-shadow: 0 12px 30px var(--app-shadow);
+  color: var(--app-ink);
   font-size: 13px;
   line-height: 1.5;
   min-width: 260px;
@@ -30,7 +30,7 @@
   height: 28px;
   border-radius: 50%;
   background: #555;
-  color: #fff;
+  color: var(--app-ink);
   display: flex;
   align-items: center;
   justify-content: center;

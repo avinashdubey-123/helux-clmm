@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PublicKey, Transaction } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
@@ -28,6 +28,28 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
   const [isEditing, setIsEditing] = useState(false);
   const [copiedPool, setCopiedPool] = useState(false);
   const [copiedMint, setCopiedMint] = useState(false);
+
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!program || !publicKey) return;
+    const checkAdmin = async () => {
+      try {
+        const [operationStateAddress] = getOperationAccountAddress(program.programId);
+        const namespace = (program.account as any).operationState;
+        if (!namespace) return;
+        const account = await namespace.fetch(operationStateAddress);
+        const adminKeys = account.operationOwners.map((k: any) => k.toString());
+        const devnetAdmin = "wE2EtwuovRxvXZoThsXhRTuCrFdAA1jTbLnJp9nfezL";
+        if (adminKeys.includes(publicKey.toString()) || publicKey.toString() === devnetAdmin ) {
+          setIsAdmin(true);
+        }
+      } catch (e) {
+        console.error("Failed to check admin status", e);
+      }
+    };
+    checkAdmin();
+  }, [program, publicKey]);
 
   const handleCopyPool = () => {
     navigator.clipboard.writeText(pool.poolPda);
@@ -60,27 +82,48 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     initialRewardsPerWeek = (rawPerSec / decimalsDivisor * 86400 * 7).toFixed(6).replace(/\.?0+$/, '');
   }
 
+  const openTimeNum = rewardInfo.openTime ? Number(rewardInfo.openTime.toString()) : 0;
+  const endTimeNum = rewardInfo.endTime ? Number(rewardInfo.endTime.toString()) : 0;
+
   const [formData, setFormData] = useState({
-    openTime: rewardInfo.openTime ? formatLocal(rewardInfo.openTime) : '',
-    endTime: rewardInfo.endTime ? formatLocal(rewardInfo.endTime) : '',
+    openTime: openTimeNum > 0 ? formatLocal(openTimeNum) : formatLocal(Date.now() / 1000),
+    endTime: endTimeNum > 0 ? formatLocal(endTimeNum) : formatLocal((Date.now() / 1000) + 86400 * 7),
     rewardsPerWeek: initialRewardsPerWeek,
     extendDays: ''
   });
 
-  const now = Date.now() / 1000;
-  const isEnded = rewardInfo.endTime ? now >= rewardInfo.endTime : false;
-  const isStarted = rewardInfo.openTime ? now > rewardInfo.openTime : false;
-  const isActive = isStarted && !isEnded;
+  const [now, setNow] = useState(Date.now() / 1000);
 
-  const formatDateRange = (start: number, end: number) => {
-    if (!start || !end) return 'Unknown';
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now() / 1000), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isEnded = endTimeNum > 0 ? now >= endTimeNum : false;
+  const isStarted = openTimeNum > 0 ? now > openTimeNum : false;
+  const isActive = isStarted && !isEnded;
+  const isUpcoming = !isStarted && !isEnded;
+
+  const getFormattedDates = (start: number, end: number) => {
+    if (!start || !end) return { short: 'Unknown', detailed: 'Unknown' };
     const d1 = new Date(start * 1000);
     const d2 = new Date(end * 1000);
-    const s = `${String(d1.getDate()).padStart(2, '0')}/${String(d1.getMonth() + 1).padStart(2, '0')}/${d1.getFullYear()}`;
-    const e = `${String(d2.getDate()).padStart(2, '0')}/${String(d2.getMonth() + 1).padStart(2, '0')}/${d2.getFullYear()}`;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    
+    const sShort = `${pad(d1.getDate())}/${pad(d1.getMonth() + 1)}/${d1.getFullYear()}`;
+    const eShort = `${pad(d2.getDate())}/${pad(d2.getMonth() + 1)}/${d2.getFullYear()}`;
+    
+    const sDetailed = `${sShort} ${pad(d1.getHours())}:${pad(d1.getMinutes())}`;
+    const eDetailed = `${eShort} ${pad(d2.getHours())}:${pad(d2.getMinutes())}`;
+    
     const days = (end - start) / 86400;
-    return `${s} - ${e} (${days.toFixed(1)} Days)`;
+    return {
+      short: `${sShort} - ${eShort} (${days.toFixed(1)} Days)`,
+      detailed: `${sDetailed} - ${eDetailed} (${days.toFixed(1)} Days)`
+    };
   };
+
+  const periodDates = getFormattedDates(openTimeNum, endTimeNum);
 
   const calculateDurationDays = () => {
     if (!formData.openTime || !formData.endTime) return 0;
@@ -94,7 +137,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     if (!formData.endTime || !formData.rewardsPerWeek || !rewardInfo.endTime) return 0;
 
     const currentNow = Math.floor(Date.now() / 1000);
-    const oldEndTime = rewardInfo.endTime;
+    const oldEndTime = endTimeNum;
     let newEndTime = Math.floor(new Date(formData.endTime).getTime() / 1000);
 
     if (isActive && formData.extendDays) {
@@ -136,7 +179,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     return requiredTokens;
   };
 
-  const remainingSeconds = Math.max(0, (rewardInfo.endTime || 0) - Math.max(now, rewardInfo.openTime || 0));
+  const remainingSeconds = Math.max(0, endTimeNum - Math.max(now, openTimeNum));
   let unemitted = 0;
   if (rewardInfo.emissionsPerSecondX64 && rewardInfo.emissionsPerSecondX64 !== '0') {
     const DEC_SCALE = BigInt(1_000_000_000);
@@ -164,7 +207,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
       throw new Error("Invalid value for one or more of the fields.");
     }
 
-    if (!isStarted) {
+    if (!isStarted && !isAdmin) {
       throw new Error("Cannot edit farm parameters before the farm has started.");
     }
 
@@ -199,7 +242,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
       const currentEmissions = new BN(rewardInfo.emissionsPerSecondX64);
       if (emissionsPerSecondX64.lt(currentEmissions)) {
         const leftRewardTime = Number(rewardInfo.endTime) - currentNow;
-        if (leftRewardTime > INCREASE_EMISSIONES_PERIOD) {
+        if (leftRewardTime > INCREASE_EMISSIONES_PERIOD && !isAdmin) {
           throw new Error("Cannot decrease reward rate unless the farm is within 72 hours of ending.");
         }
       }
@@ -211,7 +254,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     }
 
     if (openTime <= currentNow + 10) openTime = currentNow + 60;
-    if (endTime <= openTime) throw new Error("End time must be after open time.");
+    if (endTime <= openTime) throw new Error("Please select a valid date and time range.");
 
     return {
       openTime: new BN(openTime),
@@ -319,20 +362,20 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
   const tokenAbbr = rewardInfo.tokenMint.slice(0, 4).toUpperCase();
 
   return (
-    <div className="portfolio-pool-card reward-stat-box farm-row-card" style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', top: '12px', right: '16px', fontSize: '11px', color: '#7a8fa6', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        Farm Address: <span style={{ color: '#39d0d8' }}>{pool.poolPda.slice(0, 4)}...{pool.poolPda.slice(-4)}</span>
-        <button onClick={handleCopyPool} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }} title="Copy Farm Address">
-          {copiedPool ? <span style={{ color: '#39d0d8', fontSize: '12px' }}>✓</span> : <img src={copyIcon} alt="copy" style={{ width: '12px', height: '12px', opacity: 0.7 }} />}
+    <div className="portfolio-pool-card reward-stat-box farm-row-card">
+      <div className="farm-address">
+        Farm Address: <span className="farm-address-value">{pool.poolPda.slice(0, 4)}...{pool.poolPda.slice(-4)}</span>
+        <button className="farm-copy-btn" onClick={handleCopyPool} title="Copy Farm Address">
+          {copiedPool ? <span className="farm-copy-status">✓</span> : <img src={copyIcon} alt="copy" />}
         </button>
       </div>
-      <div className="reward-stat-header farm-row-header" style={{ marginTop: '12px' }}>
+      <div className="reward-stat-header farm-row-header">
         <div className="farm-row-col">
           <span className="farm-row-label">Pool</span>
-          <strong className="farm-row-value farm-row-title-flex" style={{ display: 'flex', alignItems: 'center' }}>
+          <strong className="farm-row-value farm-row-title-flex">
             {t0Name} - {t1Name}
-            <button onClick={handleCopyPool} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', marginLeft: '6px' }} title="Copy Pool Address">
-              {copiedPool ? <span style={{ color: '#39d0d8', fontSize: '12px' }}>✓</span> : <img src={copyIcon} alt="copy" style={{ width: '12px', height: '12px', opacity: 0.7 }} />}
+            <button className="farm-copy-btn" onClick={handleCopyPool} title="Copy Pool Address">
+              {copiedPool ? <span className="farm-copy-status">✓</span> : <img src={copyIcon} alt="copy" />}
             </button>
           </strong>
         </div>
@@ -340,15 +383,15 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
           <span className="farm-row-label">Reward Token</span>
           <strong className="farm-row-value farm-row-title-flex">
             {tokenAbbr}
-            <button onClick={handleCopyMint} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', marginLeft: '4px' }} title="Copy Token Mint">
-              {copiedMint ? <span style={{ color: '#39d0d8', fontSize: '12px' }}>✓</span> : <img src={copyIcon} alt="copy" style={{ width: '12px', height: '12px', opacity: 0.7 }} />}
+            <button className="farm-copy-btn farm-copy-btn-token" onClick={handleCopyMint} title="Copy Token Mint">
+              {copiedMint ? <span className="farm-copy-status">✓</span> : <img src={copyIcon} alt="copy" />}
             </button>
           </strong>
         </div>
         <div className="farm-row-col">
           <span className="farm-row-label">Period</span>
-          <strong className="farm-row-value" style={{ whiteSpace: 'nowrap' }}>
-            {formatDateRange(rewardInfo.openTime, rewardInfo.endTime)}
+          <strong className="farm-row-value farm-period-value" title={periodDates.detailed} style={{ cursor: 'pointer' }}>
+            {periodDates.short}
           </strong>
         </div>
         <div className="farm-row-col">
@@ -359,26 +402,25 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
         </div>
         <div className="farm-row-col">
           <span className="farm-row-label">Status</span>
-          <span className={`position-status-badge ${isEnded ? 'out-range' : 'in-range'} farm-row-status-badge`}>
+          <span className={`position-status-badge ${isEnded ? 'out-range' : isUpcoming ? 'upcoming' : 'in-range'} farm-row-status-badge`}>
             <span className="status-dot"></span>
-            {isEnded ? 'Ended' : 'Active'}
+            {isEnded ? 'Ended' : isUpcoming ? 'Upcoming' : 'Active'}
           </span>
         </div>
         <div className="farm-row-actions">
           <button
-            className="pos-btn collect-rewards-btn farm-row-btn"
-            style={{ filter: (busy || !isEnded) ? 'brightness(0.8)' : 'none', opacity: (busy || !isEnded) ? 0.7 : 1 }}
+            className={`pos-btn collect-rewards-btn farm-row-btn ${busy || !isEnded || unemitted <= 0 ? 'farm-row-btn-disabled' : ''}`}
             onClick={handleReclaimFunds}
-            disabled={busy || !isEnded}
-            title={!isEnded ? "Campaign must end before reclaiming funds." : ""}
+            disabled={busy || !isEnded || unemitted <= 0}
+            title={!isEnded ? "Campaign must end before reclaiming funds." : unemitted <= 0 ? "No remaining rewards to collect." : ""}
           >
-            {busy ? '...' : 'Collect Remaining Rewards'}
+            {busy ? 'Processing...' : 'Collect Remaining Rewards'}
           </button>
           <button
             className="pos-btn pos-btn-deposit farm-row-btn"
             onClick={() => setIsEditing(!isEditing)}
-            disabled={busy || !isStarted}
-            title={!isStarted ? "Cannot edit farm before it has opened." : ""}
+            disabled={busy || (!isStarted && !isAdmin)}
+            title={(!isStarted && !isAdmin) ? "Cannot edit farm before it has opened." : ""}
           >
             {isEditing ? 'Cancel Edit' : 'Edit Farm'}
           </button>
@@ -388,31 +430,30 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
       {isEditing && typeof document !== 'undefined' && createPortal(
         <div className="portfolio-modal-overlay">
           <div className="portfolio-modal-backdrop" onClick={() => setIsEditing(false)} />
-          <div className="portfolio-modal-content" style={{ maxWidth: '600px' }}>
+          <div className="portfolio-modal-content farm-edit-modal">
             <button className="portfolio-modal-close" onClick={() => setIsEditing(false)}>✕</button>
             <div className="portfolio-modal-header">
               <h2>Edit Farm: {t0Name} - {t1Name}</h2>
               <p className="portfolio-subtitle">Update parameters for your {tokenAbbr} reward farm.</p>
             </div>
-            <div className="portfolio-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="portfolio-modal-body farm-edit-body">
               {isActive && (
-                <div style={{ fontSize: '13px', color: '#ffb020', background: 'rgba(255, 176, 32, 0.1)', padding: '12px', borderRadius: '8px' }}>
+                <div className="farm-edit-note">
                   <strong>Note:</strong> You must extend the End Time by at least 7 days from its current end time. You cannot decrease the reward rate unless the farm is within 72 hours of ending.
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', textAlign: 'left' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
-                  <label style={{ fontSize: '14px', color: '#7a8fa6', fontWeight: 600, textAlign: 'left' }}>
+              <div className="farm-edit-period-section">
+                <div className="farm-edit-field-group">
+                  <label className="farm-edit-label">
                     {isActive ? 'Extend Duration (Days)' : 'Farm Period'}
                   </label>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
+                  <div className="farm-edit-period-row">
+                    <div className="farm-edit-period-input">
                       {isActive ? (
                         <input
                           type="number"
                           min="7"
-                          className="portfolio-search-bar"
-                          style={{ width: '100%', marginBottom: 0, padding: '12px', background: '#0d1321', border: '1px solid #1e2d45', borderRadius: '8px', color: '#e6f0ff', boxSizing: 'border-box' }}
+                          className="farm-edit-input portfolio-search-bar"
                           placeholder="e.g. 7"
                           value={formData.extendDays}
                           onChange={e => {
@@ -431,7 +472,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                         />
                       )}
                     </div>
-                    <div style={{ color: '#e6f0ff', fontSize: '14px', whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.05)', padding: '8px 16px', borderRadius: '20px' }}>
+                    <div className="farm-duration-summary">
                       {isActive ? (
                         formData.extendDays && parseInt(formData.extendDays) > 0 ? `Ends: ${(() => {
                           const d = new Date(formData.endTime);
@@ -453,11 +494,11 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '14px', color: '#7a8fa6', fontWeight: 600, textAlign: 'left' }}>Rewards Per Week</label>
+              <div className="farm-edit-field-group">
+                <div className="farm-edit-label-row">
+                  <label className="farm-edit-label">Rewards Per Week</label>
                   <button
-                    style={{ background: 'none', border: 'none', color: '#39d0d8', fontSize: '12px', cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1, padding: 0 }}
+                    className="farm-reset-btn"
                     onClick={() => setFormData(p => ({ ...p, rewardsPerWeek: initialRewardsPerWeek }))}
                     disabled={busy}
                   >
@@ -466,8 +507,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                 </div>
                 <input
                   type="number"
-                  className="portfolio-search-bar"
-                  style={{ width: '100%', marginBottom: 0, padding: '12px', background: '#0d1321', border: '1px solid #1e2d45', borderRadius: '8px', color: '#e6f0ff' }}
+                  className="farm-edit-input portfolio-search-bar"
                   placeholder="e.g. 1000"
                   value={formData.rewardsPerWeek}
                   onChange={e => setFormData(p => ({ ...p, rewardsPerWeek: e.target.value }))}
@@ -476,24 +516,23 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
               </div>
 
               {!validationError && calculateTotalTokens() > 0 && (
-                <div style={{ fontSize: '14px', color: '#39d0d8', background: 'rgba(57, 208, 216, 0.05)', padding: '12px', borderRadius: '8px' }}>
+                <div className="farm-total-required">
                   <strong>{isActive ? 'Extra Required:' : 'Total Required:'}</strong> {calculateTotalTokens().toFixed(4)} tokens
                   {isEnded && ` (over ${calculateDurationDays().toFixed(1)} days)`}
                 </div>
               )}
 
               {validationError && (
-                <div style={{ fontSize: '13px', color: '#ff4d4f', padding: '8px 12px', background: 'rgba(255, 77, 79, 0.1)', borderRadius: '8px', border: '1px solid rgba(255, 77, 79, 0.3)' }}>
+                <div className="farm-validation-error">
                   ⚠️ {validationError}
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', gap: '12px' }}>
+              <div className="farm-edit-actions">
                 <button
                   className="pos-btn pos-btn-withdraw"
                   onClick={() => setIsEditing(false)}
                   disabled={busy}
-                  style={{ opacity: busy ? 0.5 : 1, cursor: busy ? 'not-allowed' : 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -501,7 +540,6 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
                   className="pos-btn pos-btn-harvest"
                   onClick={handleUpdateRewardParams}
                   disabled={busy || !!validationError}
-                  style={{ opacity: ((busy || !!validationError) ? 0.5 : 1), cursor: ((busy || !!validationError) ? 'not-allowed' : 'pointer') }}
                 >
                   {busy ? 'Processing...' : 'Save Parameters'}
                 </button>
@@ -568,8 +606,8 @@ export default function Farms() {
 
   return (
     <div className="portfolio-farms-tab">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ margin: 0, color: '#e6f0ff', fontSize: '20px' }}>My Managed Farms</h2>
+      <div className="farm-page-header">
+        <h2 className="farm-page-title">My Managed Farms</h2>
         <button className="pos-btn create-farm-btn" onClick={() => navigate('/liquidity/create-farm')}>
           Create Farm
         </button>

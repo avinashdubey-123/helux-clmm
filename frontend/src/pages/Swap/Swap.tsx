@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import "./Swap.css";
 import useProgram from "../../utils/useProgram";
 import { PublicKey, SendTransactionError } from "@solana/web3.js";
@@ -17,7 +17,7 @@ import copyIcon from "../../assets/copy.svg";
 import straightArrowIcon from "../../assets/straight-arrow.svg";
 import swapIcon from "../../assets/swap.svg";
 import walletIcon from "../../assets/wallet.svg";
-import TransactionCard from "../../components/TransactionCard/TransactionCard";
+import TxSmallCard from "../../components/TxSmallCard/TxSmallCard";
 import { useTransactions } from "../../contexts/TxContext";
 import idlJson from "../../../idl/amm_v3.json";
 import { usePools, PoolRowData } from "../../contexts/PoolsContext";
@@ -90,13 +90,12 @@ function getTokenColor(symbol: string): string {
 
 export default function Swap() {
   const location = useLocation();
-  const navigate = useNavigate();
   const rawState = (location.state as any) || {};
   const poolFromRoute = (rawState?.pool?.poolPda ? rawState.pool : (rawState?.poolPda ? rawState : null)) as PoolData | null;
   const program = useProgram();
   const wallet = useWallet();
   const { connection } = useConnection();
-
+  
   const {
     pools: poolsData,
     loadingPools,
@@ -107,6 +106,7 @@ export default function Swap() {
   const { refreshPositions } = usePositions();
 
   const [displayPools, setDisplayPools] = useState<PoolRowData[]>([]);
+
 
   // Progressive batch loading logic
   useEffect(() => {
@@ -1540,30 +1540,16 @@ export default function Swap() {
 
   return (
     <div className="swap-page">
-      <div className="swap-layout" style={{ flexDirection: "row", alignItems: "flex-start" }}>
-        {/* Left Sidebar for Back Button */}
-        <div style={{ width: "100px", flexShrink: 0, marginTop: "20px" }}>
-          <button
-            className="swap-page__back"
-            onClick={() => navigate("/")}
-          >
-            <span className="swap-page__back-icon">{"<"}</span> Back
-          </button>
-        </div>
-
-        <div
-          className="swap-main"
-          style={{ display: "flex", flexDirection: "column", flex: 1 }}
-        >
+      <div className="swap-layout">
+        <div className="swap-main">
           <div className="swap-page__content">
             <div className="swap-form-col">
               {txResult && (
                 <div style={{ marginBottom: "24px" }}>
-                  <TransactionCard
+                  <TxSmallCard
                     status="success"
                     title="Transaction Successful"
-                    message="Your swap has been confirmed."
-                    explorerUrl={txResult.explorer}
+                    description="Your swap has been confirmed."
                     signature={txResult.sig}
                     onClose={() => setTxResult(null)}
                   />
@@ -1571,10 +1557,10 @@ export default function Swap() {
               )}
 
               {status && !txResult && (
-                <TransactionCard
+                <TxSmallCard
                   status={errorDetails ? "error" : "info"}
                   title={errorDetails ? "Transaction Failed" : "Status"}
-                  message={status}
+                  description={status}
                   details={errorDetails}
                   onClose={() => {
                     setStatus(null);
@@ -1605,7 +1591,7 @@ export default function Swap() {
                             <div className="swap-hover-row">
                               <span>
                                 <strong>Pool ID:</strong>{" "}
-                                {poolHoverInfo.poolId ?? "unknown"}
+                                {poolHoverInfo.poolId ? shorten(poolHoverInfo.poolId) : "unknown"}
                               </span>
                               <button
                                 className="swap-copy-btn"
@@ -1613,13 +1599,13 @@ export default function Swap() {
                                 title="Copy pool id"
                                 aria-label="Copy pool id"
                               >
-                                {copiedText === poolHoverInfo.poolId ? <span style={{color: '#39d0d8', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                                {copiedText === poolHoverInfo.poolId ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
                               </button>
                             </div>
                             <div className="swap-hover-row">
                               <span>
                                 <strong>Token0: </strong>{" "}
-                                {poolHoverInfo.token0 ?? "-"}
+                                {poolHoverInfo.token0 ? shorten(poolHoverInfo.token0) : "-"}
                               </span>
                               <button
                                 className="swap-copy-btn"
@@ -1627,13 +1613,13 @@ export default function Swap() {
                                 title="Copy token0"
                                 aria-label="Copy token0"
                               >
-                                {copiedText === poolHoverInfo.token0 ? <span style={{color: '#39d0d8', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                                {copiedText === poolHoverInfo.token0 ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
                               </button>
                             </div>
                             <div className="swap-hover-row">
                               <span>
                                 <strong>Token1: </strong>{" "}
-                                {poolHoverInfo.token1 ?? "-"}
+                                {poolHoverInfo.token1 ? shorten(poolHoverInfo.token1) : "-"}
                               </span>
                               <button
                                 className="swap-copy-btn"
@@ -1641,7 +1627,7 @@ export default function Swap() {
                                 title="Copy token1"
                                 aria-label="Copy token1"
                               >
-                                {copiedText === poolHoverInfo.token1 ? <span style={{color: '#39d0d8', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                                {copiedText === poolHoverInfo.token1 ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
                               </button>
                             </div>
                           </div>
@@ -1749,7 +1735,7 @@ export default function Swap() {
                                     {poolName}
                                   </div>
                                   <div className="swap-pool-item__meta">
-                                    <span style={{ color: "#4edde4" }}>
+                                    <span style={{ color: "var(--app-accent-bright)" }}>
                                       {feeTier}
                                     </span>{" "} Fee Rate
                                   </div>

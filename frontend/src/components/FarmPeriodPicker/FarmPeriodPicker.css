@@ -11,12 +11,12 @@
 
 .fpp-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--app-shadow-soft);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 12px 16px;
   padding-right: 40px;
-  color: #fff;
+  color: var(--app-ink);
   font-size: 16px;
   outline: none;
   cursor: pointer;
@@ -24,7 +24,7 @@
 }
 
 .fpp-input:focus {
-  border-color: #39d0d8;
+  border-color: var(--app-accent);
 }
 
 .fpp-icon {
@@ -62,20 +62,19 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
 }
 
 /* Dropdown */
 .fpp-dropdown {
   position: relative;
-  background: #1c212e; /* dark grayish blue like in image */
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
   border-radius: 12px;
   padding: 24px;
-  width: 580px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-  color: #e6f0ff;
+  width: 620px;
+  box-shadow: 0 12px 32px var(--app-shadow-strong);
+  color: var(--app-ink);
 }
 
 .fpp-header {
@@ -94,13 +93,13 @@
 .fpp-close-btn {
   background: transparent;
   border: none;
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 20px;
   cursor: pointer;
 }
 
 .fpp-close-btn:hover {
-  color: #fff;
+  color: var(--app-ink);
 }
 
 .fpp-body {
@@ -117,14 +116,15 @@
 
 .fpp-label {
   font-size: 14px;
-  color: #e6f0ff;
+  color: var(--app-ink);
   margin-bottom: 12px;
   font-weight: 500;
 }
 
 /* Calendar Card */
 .fpp-calendar-card {
-  background: #131720;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 12px;
   padding: 16px;
   height: 280px;
@@ -140,11 +140,11 @@
 .fpp-cal-nav {
   background: transparent;
   border: none;
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 16px;
   cursor: pointer;
 }
-.fpp-cal-nav:hover { color: #fff; }
+.fpp-cal-nav:hover { color: var(--app-ink); }
 
 .fpp-cal-month {
   font-weight: 500;
@@ -160,7 +160,7 @@
 .fpp-cal-days-header div {
   text-align: center;
   font-size: 12px;
-  color: #e6f0ff;
+  color: var(--app-ink);
   font-weight: 600;
 }
 
@@ -173,7 +173,7 @@
 .fpp-day {
   background: transparent;
   border: none;
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 14px;
   height: 32px;
   display: flex;
@@ -184,14 +184,18 @@
   transition: all 0.2s;
 }
 
+.fpp-day.disabled { opacity: 0.3; cursor: not-allowed; }
+.fpp-locked-label { font-size: 11px; color: var(--app-accent); }
+.fpp-duration-label { margin-top: 16px; }
+
 .fpp-day:hover:not(.empty):not(.selected) {
   background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  color: var(--app-ink);
 }
 
 .fpp-day.selected {
-  background: #cce0ff;
-  color: #0b1221;
+  background: var(--app-accent);
+  color: var(--app-bg);
   font-weight: bold;
 }
 
@@ -209,40 +213,36 @@
 .fpp-select {
   width: 100%;
   appearance: none;
-  background: #131720;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: #fff;
-  font-size: 16px;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--app-ink);
+  font-size: 15px;
   cursor: pointer;
   outline: none;
+  transition: all 0.2s ease;
 }
 
-.fpp-select:focus, .fpp-duration-input:focus {
-  border-color: #39d0d8;
+.fpp-select:hover, .fpp-select:focus,
+.fpp-duration-input:hover, .fpp-duration-input:focus {
+  border-color: var(--form-border-focus);
+  background: var(--form-bg-hover);
 }
 
-.fpp-select-wrapper::after {
-  content: "⌄";
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #fff;
-  pointer-events: none;
-}
+
 
 .fpp-duration-input {
-  background: #131720;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: #fff;
-  font-size: 16px;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--app-ink);
+  font-size: 15px;
   outline: none;
   width: 100%;
   box-sizing: border-box;
+  transition: all 0.2s ease;
 }
 
 .fpp-duration-input.fpp-error {
@@ -253,8 +253,8 @@
 /* Summary Card */
 .fpp-summary-card {
   margin-top: 24px;
-  background: #2a3345;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -265,20 +265,20 @@
 }
 
 .fpp-summary-label {
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 14px;
   margin-bottom: 8px;
 }
 
 .fpp-summary-date {
-  color: #fff;
+  color: var(--app-ink);
   font-size: 18px;
   font-weight: 500;
   margin-bottom: 4px;
 }
 
 .fpp-summary-time {
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 14px;
 }
 
@@ -292,8 +292,8 @@
 
 .fpp-btn-cancel {
   background: transparent;
-  border: 1px solid #39d0d8;
-  color: #39d0d8;
+  border: 1px solid var(--app-accent);
+  color: var(--app-accent);
   padding: 10px 24px;
   border-radius: 8px;
   font-size: 16px;
@@ -302,9 +302,9 @@
 }
 
 .fpp-btn-confirm {
-  background: #39d0d8;
+  background: var(--app-accent);
   border: none;
-  color: #0b1221;
+  color: var(--app-bg);
   padding: 10px 24px;
   border-radius: 8px;
   font-size: 16px;
@@ -315,13 +315,80 @@
 
 .fpp-btn-confirm:disabled {
   background: rgba(255, 255, 255, 0.1);
-  color: #7a8fa6;
+  color: var(--app-muted);
   cursor: not-allowed;
 }
 
 .fpp-btn-cancel:hover {
-  background: rgba(57, 208, 216, 0.1);
+  background: var(--app-accent-soft);
 }
 .fpp-btn-confirm:hover:not(:disabled) {
   opacity: 0.9;
+}
+
+/* Custom Dropdown */
+.fpp-select {
+  opacity: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
+  transition: all 0.2s;
+  cursor: pointer;
+  width: 100%;
+}
+
+.fpp-select.open {
+  border-color: var(--form-border-focus);
+  background: var(--form-bg-hover);
+}
+
+.fpp-select.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fpp-select-caret {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s;
+}
+
+.fpp-select-caret.open {
+  transform: rotate(180deg);
+}
+
+.fpp-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  background: var(--form-panel-bg);
+  border: 1px solid var(--form-panel-border);
+  border-radius: 16px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px var(--app-shadow-strong);
+  padding: 8px;
+}
+
+.fpp-dropdown-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-ink);
+  transition: all 0.2s;
+}
+
+.fpp-dropdown-option:hover {
+  background: var(--form-bg-hover);
+}
+
+.fpp-dropdown-option.selected {
+  background: var(--form-bg-hover);
+  color: var(--app-accent);
 }

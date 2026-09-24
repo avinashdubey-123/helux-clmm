@@ -143,7 +143,7 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
               <div className="lp-hover-card">
                 <div className="lp-hover-row">
                   <span>
-                    <strong>Pool ID:</strong> {hoverInfo.poolId ?? "unknown"}
+                    <strong>Pool ID:</strong> {hoverInfo.poolId ? `${hoverInfo.poolId.slice(0, 6)}...${hoverInfo.poolId.slice(-6)}` : "unknown"}
                   </span>
                   <button
                     className="lp-copy-btn"
@@ -151,12 +151,12 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
                     title="Copy pool id"
                     aria-label="Copy pool id"
                   >
-                    {copiedText === hoverInfo.poolId ? <span style={{color: '#39d0d8', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                    {copiedText === hoverInfo.poolId ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
                   </button>
                 </div>
                 <div className="lp-hover-row">
                   <span>
-                    <strong>Token0:</strong> {hoverInfo.token0 ?? "-"}
+                    <strong>Token0:</strong> {hoverInfo.token0 ? `${hoverInfo.token0.slice(0, 6)}...${hoverInfo.token0.slice(-6)}` : "-"}
                   </span>
                   <button
                     className="lp-copy-btn"
@@ -164,12 +164,12 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
                     title="Copy token0"
                     aria-label="Copy token0"
                   >
-                    {copiedText === hoverInfo.token0 ? <span style={{color: '#39d0d8', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                    {copiedText === hoverInfo.token0 ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
                   </button>
                 </div>
                 <div className="lp-hover-row">
                   <span>
-                    <strong>Token1:</strong> {hoverInfo.token1 ?? "-"}
+                    <strong>Token1:</strong> {hoverInfo.token1 ? `${hoverInfo.token1.slice(0, 6)}...${hoverInfo.token1.slice(-6)}` : "-"}
                   </span>
                   <button
                     className="lp-copy-btn"
@@ -177,7 +177,7 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
                     title="Copy token1"
                     aria-label="Copy token1"
                   >
-                    {copiedText === hoverInfo.token1 ? <span style={{color: '#39d0d8', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                    {copiedText === hoverInfo.token1 ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
                   </button>
                 </div>
               </div>
@@ -314,7 +314,7 @@ const Liquidity = () => {
       <div className="lp-top">
         <div className="lp-top-left">
           <h1 className="lp-title">Liquidity Pools</h1>
-          <p className="lp-subtitle">Provide liquidity, earn yield.</p>
+          <p className="lp-subtitle">Supply liquidity to generate returns.</p>
         </div>
 
         <div className="lp-stats">
@@ -343,7 +343,6 @@ const Liquidity = () => {
           <button
             className="lp-create-btn"
             onClick={() => navigate("/liquidity/create-farm")}
-            style={{ background: 'transparent', border: '1px solid #aa3bff', color: '#aa3bff' }}
           >
             Create Farm
           </button>

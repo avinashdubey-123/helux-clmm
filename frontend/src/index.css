@@ -42,34 +42,89 @@ body {
   --letter-spacing-normal: 0.18px;
   --letter-spacing-loose: 0.5px;
 
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Shared application palette. The About page is the visual reference. */
+  --app-bg: #30332e;
+  --app-bg-dim: #292c28;
+  --app-surface: #3a3d37;
+  --app-surface-strong: #41443d;
+  --app-ink: #f3eee4;
+  --app-muted: #B4B2A9;
+  --app-muted-strong: #D0CCC3;
+  --app-accent: #EFBF04;
+  --app-accent-bright: #EFBF04;
+  --app-chart: var(--app-accent-border);
+  --app-pointer: var(--app-accent);
+  --app-current: var(--app-error);
+  --app-accent-soft: #514C37;
+  --app-accent-border: #98834C;
+  --app-action: var(--app-accent);
+  --app-action-soft: var(--app-accent-soft);
+  --app-action-border: var(--app-accent-border);
+  --app-action-hover: var(--app-accent-border);
+  --form-bg: #292c28;
+  --form-bg-hover: #30332e;
+  --form-panel-bg: #20251f;
+  --form-panel-border: #4A4D46;
+  --listing-bg: var(--form-panel-bg);
+  --listing-bg-hover: var(--app-bg-dim);
+  --listing-border: var(--form-panel-border);
+  --form-border: #51534E;
+  --form-border-focus: var(--app-accent-border);
+  --form-label: var(--app-muted);
+  --form-focus-ring: var(--app-accent-soft);
+  --app-border: #4F514B;
+  --app-border-strong: #666761;
+  --app-rose: #8e3b46;
+  --app-success: #2bb900;
+  --app-error:  #cc1808;
+  --app-overlay-05: #3A3D37;
+  --app-overlay-08: #3F423C;
+  --app-overlay-12: #484A44;
+  --app-shadow-soft: #262925;
+  --app-shadow-strong: #181917;
+  --app-shadow: #222420;
+  --lp-fill-btn: #3A3D38;
+
+  /* Shared page-level aliases keep individual page styles on the same theme. */
+  --page-control-bg: var(--app-action-soft);
+  --page-control-border: var(--app-action-border);
+  --page-control-text: var(--app-action);
+  --page-control-hover-bg: var(--app-action-hover);
+  --page-control-hover-border: var(--app-action);
+  --page-control-shadow: var(--app-accent-border);
+  --if-background-base: var(--app-bg);
+  --if-text-primary: var(--app-ink);
+  --if-text-light: var(--app-ink);
+  --if-text-secondary: var(--app-muted);
+
+  --text: var(--app-muted);
+  --text-h: var(--app-ink);
+  --bg: var(--app-bg);
+  --border: var(--app-border);
+  --code-bg: var(--app-surface);
+  --accent: var(--app-accent);
+  --accent-bg: var(--app-accent-soft);
+  --accent-border: var(--app-accent-border);
+  --social-bg: var(--app-overlay-05);
+  --shadow: var(--app-shadow) 0 10px 15px -3px;
 
   --btn-outline-bg: transparent;
-  --btn-outline-border: #39d0d8;
-  --btn-outline-text: #39d0d8;
-  --btn-outline-hover-bg: rgba(14, 24, 41, 0.88);
-  --btn-outline-hover-border: rgba(77, 222, 228, 0.95);
-  --btn-outline-active-bg: rgba(9, 18, 33, 0.95);
-  --btn-outline-active-border: rgba(57, 208, 216, 0.72);
-  --btn-solid-bg: #39d0d8;
-  --btn-solid-hover-bg: #4edde4;
-  --btn-solid-active-bg: #2d85a8;
-  --btn-solid-text: #181F35;
+  --btn-outline-border: var(--app-accent);
+  --btn-outline-text: var(--app-accent);
+  --btn-outline-hover-bg: var(--app-accent-soft);
+  --btn-outline-hover-border: var(--app-accent-bright);
+  --btn-outline-active-bg: var(--app-accent-border);
+  --btn-outline-active-border: var(--app-accent);
+  --btn-solid-bg: var(--app-accent);
+  --btn-solid-hover-bg: var(--app-accent-bright);
+  --btn-solid-active-bg: var(--app-rose);
+  --btn-solid-text: var(--app-bg);
   --btn-radius: 12px;
   --btn-transition: 0.15s ease;
 
   font: var(--font-size-md) / var(--line-height-normal) var(--font-body);
   letter-spacing: var(--letter-spacing-normal);
-  color-scheme: light dark;
+  color-scheme: dark;
   color: var(--text);
   background: var(--bg)
 }
@@ -78,21 +133,6 @@ body {
   :root {
     --font-size-base: 14px;
     --font-size-md: 16px;
-  }
-}
-
-@media (prefers-color-scheme:dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: linear-gradient(90deg, #0b1221, #071029);
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px
   }
 }
 
@@ -113,6 +153,42 @@ body {
 
 body {
   margin: 0
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+@media (max-width: 720px) {
+  #root {
+    border-inline: 0;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  .wallet-adapter-button {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 button {
@@ -176,7 +252,7 @@ code {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1d2a47 #0a0f1f;
+  scrollbar-color: var(--app-accent-border) #0a0f1f;
 }
 
 .page-title-inline {

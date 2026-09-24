@@ -10,7 +10,7 @@
 }
 
 .circular-loader-path {
-  stroke: #39d0d8;
+  stroke: var(--app-accent);
   stroke-dasharray: 1, 200;
   stroke-dashoffset: 0;
   animation: circular-loader-dash 1.5s ease-in-out infinite;

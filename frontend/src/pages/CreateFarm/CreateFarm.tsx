@@ -31,6 +31,15 @@ const formatToDDMMYYYY = (dateString: string) => {
 
 export default function CreateFarm() {
   const navigate = useNavigate();
+  const handleGlobalBack = () => {
+    if (step > 1) {
+      handleBack()
+    } else if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/liquidity')
+    }
+  };
   const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
   const program = useProgram();
@@ -65,13 +74,6 @@ export default function CreateFarm() {
   const myPools = pools.filter(p => p.poolCreator === publicKey?.toBase58());
 
   const handleNext = () => {
-    if (step === 1 && selectedPool) {
-      const activeRewards = selectedPool.rewardInfos?.filter(r => r.initialized).length || 0;
-      if (activeRewards >= 3) {
-        alert("This pool already has the maximum of 3 active rewards.");
-        return;
-      }
-    }
     setStep(s => Math.min(s + 1, 3));
   };
   const handleBack = () => setStep(s => Math.max(s - 1, 1));
@@ -309,7 +311,7 @@ export default function CreateFarm() {
       <div className="cf-main">
         {/* Sidebar Stepper */}
         <div className="cf-sidebar">
-          <button className="cf-back-btn" onClick={() => step > 1 ? handleBack() : navigate(-1)}>
+          <button className="cf-back-btn" onClick={handleGlobalBack}>
             <span className="cf-back-icon">&lsaquo;</span> Back
           </button>
           <div className="cf-stepper">
@@ -377,12 +379,12 @@ export default function CreateFarm() {
               <div className="cf-title">First, select a pool for farm rewards</div>
               <div className="cf-card">
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>Select Pool</h3>
-                <p style={{ color: '#7a8fa6', fontSize: '14px', marginBottom: '16px' }}>Select from your created pools:</p>
+                <p style={{ color: 'var(--app-accent)', fontSize: '14px', marginBottom: '16px' }}>Select from your created pools:</p>
                 
                 {loadingPools ? (
                   <p>Loading your pools...</p>
                 ) : myPools.length === 0 ? (
-                  <p style={{ color: '#7a8fa6' }}>You haven't created any pools yet. <Link to="/liquidity/create" style={{ color: '#39d0d8', textDecoration: 'none' }}>Create a new pool</Link></p>
+                  <p style={{ color: '#7a8fa6' }}>You haven't created any pools yet. <Link to="/liquidity/create" style={{ color: 'var(--app-accent)', textDecoration: 'none' }}>Create a new pool</Link></p>
                 ) : (
                   <div className="cf-pool-select-wrap">
                     {myPools.map(pool => {
@@ -401,7 +403,7 @@ export default function CreateFarm() {
                           <div className="cf-pool-info">
                             <div className="cf-pool-name">{t0Name} - {t1Name}</div>
                             <div className="cf-pool-id">
-                              Pool Address: <span className="cf-pool-cyan">{pool.poolPda.slice(0, 4)}...{pool.poolPda.slice(-4)}</span>
+                              Pool Address: <span className="cf-pool-accent">{pool.poolPda.slice(0, 4)}...{pool.poolPda.slice(-4)}</span>
                               <button className="cf-copy-btn" onClick={(e) => handleCopyPool(e, pool.poolPda)} title="Copy Pool Address">
                                 {copiedPool === pool.poolPda ? <span className="cf-copy-check">✓</span> : <img className="cf-copy-icon" src={copyIcon} alt="copy" />}
                               </button>
@@ -413,11 +415,17 @@ export default function CreateFarm() {
                   </div>
                 )}
 
+                {selectedPool && (selectedPool.rewardInfos?.filter(r => r.initialized).length || 0) >= 3 && (
+                  <div style={{ color: '#ef4444', marginTop: '16px', fontSize: '14px', background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px' }}>
+                    This pool already has the maximum of 3 active rewards. You cannot add more farms to this pool.
+                  </div>
+                )}
+
                 <div className="cf-actions">
                   <button 
                     className="cf-btn-next" 
                     onClick={handleNext} 
-                    disabled={!selectedPool}
+                    disabled={!selectedPool || (selectedPool.rewardInfos?.filter(r => r.initialized).length || 0) >= 3}
                   >
                     Continue
                   </button>
@@ -440,6 +448,11 @@ export default function CreateFarm() {
                   <div key={index} className="cf-reward-box">
                     <div className="cf-reward-header">
                       <span>Reward Token</span>
+                      {selectedPool && (
+                        <span className="cf-reward-slot-badge">
+                          Farm Reward Slot {(selectedPool.rewardInfos?.filter(r => r.initialized).length || 0) + index + 1} of 3
+                        </span>
+                      )}
                     </div>
                     
                     <div className="cf-input-group">
@@ -481,7 +494,7 @@ export default function CreateFarm() {
                     </div>
 
                     {totalTokens > 0 && (
-                      <div style={{ marginTop: '16px', fontSize: '14px', color: '#39d0d8', background: 'rgba(57, 208, 216, 0.05)', padding: '12px', borderRadius: '8px' }}>
+                      <div style={{ marginTop: '16px', fontSize: '14px', color: 'var(--app-accent)', background: 'var(--app-accent-soft)', padding: '12px', borderRadius: '8px' }}>
                         <strong>Total Required:</strong> {totalTokens.toFixed(4)} tokens (will be balance checked on next step)
                       </div>
                     )}
@@ -512,7 +525,7 @@ export default function CreateFarm() {
                     <span className="cf-review-value">
                       {selectedPool.tokenMint0.slice(0, 4).toUpperCase()} - {selectedPool.tokenMint1.slice(0, 4).toUpperCase()}
                     </span>
-                    <span style={{ color: '#7a8fa6', fontSize: '13px' }}>
+                    <span style={{ color: 'var(--app-accent)', fontSize: '13px' }}>
                       ({selectedPool.poolPda.slice(0, 4)}...{selectedPool.poolPda.slice(-4)})
                     </span>
                     <button className="cf-copy-btn" onClick={(e) => handleCopyPool(e, selectedPool.poolPda)} title="Copy Pool Address">
@@ -525,6 +538,12 @@ export default function CreateFarm() {
                 
                 {rewards.map((reward, i) => (
                   <div key={i} className="cf-review-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '4px' }}>
+                      <span className="cf-review-label">Reward Slot</span>
+                      <span className="cf-reward-slot-badge">
+                        Farm Reward Slot {(selectedPool?.rewardInfos?.filter(r => r.initialized).length || 0) + i + 1} of 3
+                      </span>
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span className="cf-review-label">Token Mint</span>
                       <span className="cf-review-value">{reward.tokenMint.slice(0, 8)}...{reward.tokenMint.slice(-8)}</span>
@@ -541,7 +560,7 @@ export default function CreateFarm() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span className="cf-review-label">Total Deposit Required</span>
-                      <span className="cf-review-value" style={{ color: '#39d0d8' }}>{calculateTotalTokens(reward).toFixed(4)}</span>
+                      <span className="cf-review-value" style={{ color: 'var(--app-accent)' }}>{calculateTotalTokens(reward).toFixed(4)}</span>
                     </div>
                   </div>
                 ))}

@@ -30,39 +30,17 @@
   }
 }
 
-.swap-page__back {
-  background: transparent;
-  border: 1px solid rgba(35, 50, 82, 0.95);
-  color: #e6f0ff;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  transition: all 0.2s ease;
-}
 
-.swap-page__back:hover {
-  background: rgba(255,255,255,0.05);
-  color: #e6f0ff;
-}
-
-.swap-page__back-icon {
-  font-size: 18px;
-  line-height: 1;
-}
 
 .swap-card {
   width: 100%;
   max-width: 820px;
-  background: rgba(14, 22, 39, 0.92);
-  border: 1px solid rgba(35, 50, 82, 0.95);
-  border-radius: 16px;
+  background: var(--form-panel-bg);
+  border: 1px solid var(--form-panel-border);
+  border-radius: 24px;
   padding: 20px;
   color: var(--if-text-light);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 60px var(--app-shadow);
   margin: 0 auto;
 }
 
@@ -77,7 +55,7 @@
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #fff;
+  color: var(--app-ink);
   display: block;
 }
 
@@ -91,10 +69,10 @@
   font-size: 13px;
   padding: 4px 10px;
   border-radius: 12px;
-  background: rgba(78, 221, 228, 0.1);
-  color: #4edde4;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-bright);
   font-weight: 500;
-  border: 1px solid rgba(78, 221, 228, 0.2);
+  border: 1px solid var(--app-accent-border);
 }
 
 .swap-pool-selector-wrapper {
@@ -115,8 +93,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 14px;
   color: var(--if-text-primary);
   font-size: 15px;
@@ -125,8 +103,8 @@
 }
 
 .swap-pool-selector-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--form-bg-hover);
+  border-color: var(--form-border-focus);
 }
 
 .swap-pool-dropdown {
@@ -134,15 +112,15 @@
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: rgba(24, 27, 38, 0.95);
+  background: var(--form-panel-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--form-panel-border);
   border-radius: 16px;
   z-index: 100;
   max-height: 300px;
   overflow-y: auto;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 32px var(--app-shadow-strong);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -162,16 +140,16 @@
   box-sizing: border-box;
   padding: 12px 36px 12px 14px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: white;
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
+  color: var(--app-ink);
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
 }
 
 .swap-pool-search-input:focus {
-  border-color: #4edde4;
+  border-color: var(--form-border-focus);
 }
 
 .swap-pool-search-clear {
@@ -191,7 +169,7 @@
 }
 
 .swap-pool-search-clear:hover {
-  color: #ffffffb7;
+  color: rgba(243, 238, 228, 0.72);
 }
 
 .swap-pool-item {
@@ -209,12 +187,12 @@
 }
 
 .swap-pool-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--app-accent-soft);
 }
 
 .swap-pool-item.active {
-  background: rgba(78, 221, 228, 0.15);
-  border: 1px solid rgba(78, 221, 228, 0.3);
+  background: var(--app-accent-soft);
+  border: 1px solid var(--app-accent-border);
 }
 
 .swap-pool-item__name {
@@ -241,8 +219,18 @@
   }
 }
 
+@media (max-width: 720px) {
+  .swap-page { padding: 96px 12px 48px; }
+  .swap-card { padding: 16px; border-radius: 14px; }
+  .swap-header { align-items: flex-start; gap: 12px; flex-direction: column; }
+  .swap-title h2 { font-size: 20px; }
+  .swap-body { gap: 16px; }
+  .swap-actions-row button,
+  .swap-btn-full { width: 100%; max-width: 320px; margin: 0 auto; display: block; }
+}
+
 .pool-details-panel {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--app-shadow-soft);
   border-radius: 16px;
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.04);
@@ -274,7 +262,7 @@
 
 .pool-details-header__fee {
   font-size: 13px;
-  color: #4edde4;
+  color: var(--app-accent-bright);
   font-weight: 600;
 }
 
@@ -320,8 +308,8 @@
 }
 
 .swap-input-card {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 20px;
   padding: 16px;
   transition: all 0.3s ease;
@@ -329,8 +317,8 @@
 
 .swap-input-card:hover,
 .swap-input-card:focus-within {
-  background: rgba(0, 0, 0, 0.35);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--form-bg-hover);
+  border-color: var(--form-border-focus);
 }
 
 .swap-input-card--invalid {
@@ -366,8 +354,8 @@
 }
 
 .swap-input-card-btn {
-  background: rgba(78, 221, 228, 0.15);
-  color: #4edde4;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-bright);
   border: none;
   padding: 2px 8px;
   border-radius: 6px;
@@ -378,8 +366,8 @@
 }
 
 .swap-input-card-btn:hover {
-  background: rgba(78, 221, 228, 0.3);
-  color: #fff;
+  background: var(--app-accent-border);
+  color: var(--app-ink);
 }
 
 .swap-input-card-row {
@@ -421,7 +409,7 @@
 .swap-token-symbol {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--app-ink);
 }
 
 .swap-token-chevron {
@@ -441,7 +429,7 @@
   background: transparent;
   border: none;
   outline: none;
-  color: #fff;
+  color: var(--app-ink);
   font-size: 28px;
   font-weight: 500;
   text-align: right;
@@ -452,6 +440,11 @@
 .swap-input-field-borderless::placeholder {
   color: rgba(255, 255, 255, 0.2);
 }
+
+.swap-input-field-borderless:focus {
+  color: var(--app-accent);
+}
+
 
 .swap-input-fiat-value {
   font-size: 12px;
@@ -468,8 +461,8 @@
 }
 
 .swap-direction-toggle__btn {
-  background: rgba(30, 33, 43, 1);
-  border: 4px solid rgba(20, 22, 31, 1);
+  background: var(--form-bg);
+  border: 4px solid var(--form-border);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -489,7 +482,6 @@
 .swap-direction-toggle__swap {
   width: 22px;
   height: 22px;
-  filter: brightness(0) saturate(100%) invert(93%) sepia(49%) saturate(5119%) hue-rotate(143deg) brightness(93%) contrast(91%);
   opacity: 0.8;
   position: absolute;
   transition: opacity 0.2s ease;
@@ -550,8 +542,7 @@
   width: 18px;
   height: 12px;
   border-radius: 2px;
-  filter: brightness(0) saturate(100%) invert(93%) sepia(49%) saturate(5119%) hue-rotate(143deg) brightness(93%) contrast(91%);
-  border: 1px solid #4edde4;
+  border: 1px solid var(--app-accent-bright);
   ;
 
 }
@@ -570,18 +561,19 @@
   padding: 16px;
   border-radius: 16px;
   border: none;
-  background: linear-gradient(135deg, #4edde4 0%, #17b0b8 100%);
-  color: white;
+  background: var(--btn-solid-bg);
+  color: var(--btn-solid-text);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 14px rgba(78, 221, 228, 0.4);
+  box-shadow: 0 4px 14px var(--app-accent-border);
 }
 
 .swap-btn-full:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(78, 221, 228, 0.6);
+  background: var(--btn-solid-hover-bg);
+  box-shadow: 0 6px 20px var(--app-accent-border);
 }
 
 .swap-btn-full:active:not(:disabled) {
@@ -608,11 +600,11 @@
   z-index: 100;
   min-width: 260px;
   padding: 14px 18px;
-  background: rgba(27, 38, 56, 0.96);
+  background: var(--form-bg-hover);
   border: 1px solid #2b3a55;
   border-radius: 10px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-  color: #e6f0ff;
+  color: var(--app-ink);
   font-size: 12px;
   line-height: 1.35;
   pointer-events: auto;
@@ -638,13 +630,13 @@
 }
 
 .swap-pool-hover-card strong {
-  color: #cfe4ff;
+  color: var(--app-accent-border);
 }
 
 .swap-copy-btn {
-  background: rgba(57, 208, 216, 0.08);
-  border: 1px solid #39d0d8;
-  color: #39d0d8;
+  background: var(--app-accent-soft);
+  border: 1px solid var(--app-accent);
+  color: var(--app-accent);
   padding: 4px 6px;
   border-radius: 6px;
   cursor: pointer;
@@ -661,13 +653,12 @@
 }
 
 .swap-copy-btn:hover {
-  background: #39d0d8;
-  color: #061014;
+  filter: brightness(0.8);
 }
 
 .swap-copy-btn:active {
   transform: scale(0.96);
-  box-shadow: 0 0 0 2px rgba(57, 208, 216, 0.25);
+  box-shadow: 0 0 0 2px var(--app-accent-border);
 }
 
 .copy-status-inline {
@@ -683,10 +674,10 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 2px solid #0b1221;
+  border: 2px solid var(--app-bg);
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
+  color: var(--app-ink);
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   letter-spacing: -0.5px;
@@ -728,8 +719,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: #1a2235;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--form-bg);
+  border: 1px solid var(--form-border);
   padding: 6px 12px;
   border-radius: 16px;
   cursor: pointer;
@@ -740,7 +731,7 @@
 }
 
 .swap-slippage-toggle:hover {
-  background-color: #242f47;
+  filter: brightness(0.8);
 }
 
 .swap-slippage-overlay {
@@ -748,12 +739,12 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 10;
-  background-color: #1a2235;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 12px;
   padding: 12px;
   width: 180px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px var(--app-shadow);
 }
 
 .swap-slippage-overlay-title {
@@ -773,7 +764,7 @@
   padding: 6px 0;
   border-radius: 8px;
   border: 1px solid transparent;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--app-shadow-soft);
   color: var(--if-text-secondary);
   cursor: pointer;
   font-size: 13px;
@@ -781,9 +772,9 @@
 }
 
 .swap-slippage-option.active {
-  border-color: #4edde4;
-  background-color: rgba(78, 221, 228, 0.1);
-  color: #4edde4;
+  border-color: var(--app-accent-bright);
+  background-color: var(--app-accent-soft);
+  color: var(--app-accent-bright);
 }
 
 .swap-slippage-option:hover:not(.active) {

@@ -27,6 +27,8 @@ export default function FarmPeriodPicker({ startTime, endTime, onChange, classNa
   const [tempDate, setTempDate] = useState<Date>(new Date(initialStart));
   const [tempHours, setTempHours] = useState(String(initialStart.getHours()).padStart(2, '0'));
   const [tempMinutes, setTempMinutes] = useState(String(initialStart.getMinutes()).padStart(2, '0'));
+  const [isHoursOpen, setIsHoursOpen] = useState(false);
+  const [isMinutesOpen, setIsMinutesOpen] = useState(false);
   
   // Calculate duration from props if exists
   const initialDuration = (startTime && endTime) 
@@ -95,7 +97,6 @@ export default function FarmPeriodPicker({ startTime, endTime, onChange, classNa
           key={i} 
           className={`fpp-day ${isSelected ? 'selected' : ''} ${isPast || lockStartDate ? 'disabled' : ''}`}
           disabled={isPast || lockStartDate}
-          style={isPast || lockStartDate ? { opacity: 0.3, cursor: 'not-allowed' } : {}}
           onClick={(e) => {
             e.preventDefault();
             if (isPast || lockStartDate) return;
@@ -149,7 +150,7 @@ export default function FarmPeriodPicker({ startTime, endTime, onChange, classNa
     start.setHours(parseInt(tempHours || '0', 10));
     start.setMinutes(parseInt(tempMinutes || '0', 10));
     
-    let finalDuration = parseInt(duration || '0', 10);
+    const finalDuration = parseInt(duration || '0', 10);
     if (finalDuration < 7) return; // shouldn't happen due to disabled button, but safe-guard
     
     const end = new Date(start.getTime() + finalDuration * 24 * 60 * 60 * 1000);
@@ -163,12 +164,14 @@ export default function FarmPeriodPicker({ startTime, endTime, onChange, classNa
   };
 
   const formatDisplayValue = () => {
-    if (!startTime || !endTime) return '';
+    const format = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    if (!startTime || !endTime) {
+      // Default to current temporary date and projected end date
+      return `${format(tempDate)} - ${format(projectedEnd)}`;
+    }
     const sd = new Date(startTime);
     const ed = new Date(endTime);
     if (isNaN(sd.getTime()) || isNaN(ed.getTime())) return '';
-    
-    const format = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
     return `${format(sd)} - ${format(ed)}`;
   };
 
@@ -229,45 +232,73 @@ export default function FarmPeriodPicker({ startTime, endTime, onChange, classNa
               
               {/* Right side: Time & Duration */}
               <div className="fpp-right">
-                <div className="fpp-label">Start at {lockStartDate && <span style={{fontSize: '11px', color: '#ffb020'}}>(Locked)</span>}</div>
+                <div className="fpp-label">Start at {lockStartDate && <span className="fpp-locked-label">(Locked)</span>}</div>
                 <div className="fpp-time-row">
-                  <div className="fpp-select-wrapper">
-                    <select 
-                      className="fpp-select" 
-                      value={tempHours} 
-                      disabled={lockStartDate}
-                      onChange={e => {
-                        const newHour = parseInt(e.target.value, 10);
-                        setTempHours(e.target.value);
-                        if (isSelectedToday && newHour === currentHour && parseInt(tempMinutes, 10) < currentMinute) {
-                          setTempMinutes(String(currentMinute).padStart(2, '0'));
-                        }
-                      }}
+                  <div className="fpp-select-wrapper" style={{ position: "relative" }}>
+                    <div 
+                      className={`fpp-select ${isHoursOpen ? 'open' : ''} ${lockStartDate ? 'disabled' : ''}`}
+                      onClick={() => { if (!lockStartDate) setIsHoursOpen(!isHoursOpen); }}
                     >
-                      {Array.from({ length: 24 }).map((_, i) => {
-                        if (isSelectedToday && i < currentHour) return null;
-                        const val = String(i).padStart(2, '0');
-                        return <option key={val} value={val}>{val}</option>;
-                      })}
-                    </select>
+                      <span>{tempHours}</span>
+                      <svg className={`fpp-select-caret ${isHoursOpen ? 'open' : ''}`} viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5H7z" /></svg>
+                    </div>
+                    {isHoursOpen && !lockStartDate && (
+                      <div className="fpp-dropdown-menu">
+                        {Array.from({ length: 24 }).map((_, i) => {
+                          if (isSelectedToday && i < currentHour) return null;
+                          const val = String(i).padStart(2, '0');
+                          return (
+                            <div 
+                              key={val}
+                              className={`fpp-dropdown-option ${tempHours === val ? 'selected' : ''}`}
+                              onClick={() => {
+                                const newHour = parseInt(val, 10);
+                                setTempHours(val);
+                                if (isSelectedToday && newHour === currentHour && parseInt(tempMinutes, 10) < currentMinute) {
+                                  setTempMinutes(String(currentMinute).padStart(2, '0'));
+                                }
+                                setIsHoursOpen(false);
+                              }}
+                            >
+                              {val}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="fpp-select-wrapper">
-                    <select 
-                      className="fpp-select" 
-                      value={tempMinutes} 
-                      disabled={lockStartDate}
-                      onChange={e => setTempMinutes(e.target.value)}
+                  <div className="fpp-select-wrapper" style={{ position: "relative" }}>
+                    <div 
+                      className={`fpp-select ${isMinutesOpen ? 'open' : ''} ${lockStartDate ? 'disabled' : ''}`}
+                      onClick={() => { if (!lockStartDate) setIsMinutesOpen(!isMinutesOpen); }}
                     >
-                      {Array.from({ length: 60 }).map((_, i) => {
-                        if (isSelectedToday && parseInt(tempHours, 10) === currentHour && i < currentMinute) return null;
-                        const val = String(i).padStart(2, '0');
-                        return <option key={val} value={val}>{val}</option>;
-                      })}
-                    </select>
+                      <span>{tempMinutes}</span>
+                      <svg className={`fpp-select-caret ${isMinutesOpen ? 'open' : ''}`} viewBox="0 0 24 24"><path fill="currentColor" d="M7 10l5 5 5-5H7z" /></svg>
+                    </div>
+                    {isMinutesOpen && !lockStartDate && (
+                      <div className="fpp-dropdown-menu">
+                        {Array.from({ length: 60 }).map((_, i) => {
+                          if (isSelectedToday && parseInt(tempHours, 10) === currentHour && i < currentMinute) return null;
+                          const val = String(i).padStart(2, '0');
+                          return (
+                            <div 
+                              key={val}
+                              className={`fpp-dropdown-option ${tempMinutes === val ? 'selected' : ''}`}
+                              onClick={() => {
+                                setTempMinutes(val);
+                                setIsMinutesOpen(false);
+                              }}
+                            >
+                              {val}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
-                <div className="fpp-label" style={{ marginTop: '16px' }}>Duration (Days)</div>
+                <div className="fpp-label fpp-duration-label">Duration (Days)</div>
                 <input 
                   type="number" 
                   className={`fpp-duration-input ${parseInt(duration || '0', 10) < 7 || parseInt(duration || '0', 10) > 90 ? 'fpp-error' : ''}`}

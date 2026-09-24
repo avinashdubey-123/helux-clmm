@@ -312,7 +312,7 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
               value={percentage} 
               onChange={handleSliderChange}
               className="withdraw-slider"
-              style={{ background: `linear-gradient(to right, #39d0d8 ${percentage}%, #1a2640 ${percentage}%)` }}
+              style={{ background: `linear-gradient(to right, var(--app-accent) ${percentage}%, #1a2640 ${percentage}%)` }}
             />
             <div className="withdraw-slider-marks">
               <span onClick={() => setMaxPercentage(0)}>0%</span>

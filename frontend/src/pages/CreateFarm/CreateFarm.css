@@ -4,7 +4,7 @@
   padding: 112px 40px 72px;
   max-width: 1200px;
   margin: 0 auto;
-  color: #e6f0ff;
+  color: var(--app-ink);
 }
 
 .cf-header {
@@ -16,8 +16,8 @@
 .cf-back-btn {
   margin-bottom: 20px;
   background: transparent;
-  border: 1px solid rgba(35, 50, 82, 0.95);
-  color: #e6f0ff;
+  border: 1px solid var(--app-accent-border);
+  color: var(--app-accent);
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
@@ -25,17 +25,17 @@
   align-items: center;
   gap: 8px;
   width: fit-content;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s ease;
 }
 .cf-back-btn:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--app-accent-soft);
+  color: var(--app-ink);
 }
 .cf-back-icon {
   font-size: 18px;
   line-height: 1;
-}
-
-.cf-back-btn:hover {
-  color: #e6f0ff;
 }
 
 .cf-main {
@@ -52,7 +52,7 @@
 }
 
 .cf-stepper {
-  background: #0b1221;
+  background: var(--app-bg);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 30px 20px;
@@ -72,7 +72,7 @@
   cursor: pointer;
 }
 .cf-step.clickable:hover .cf-step-icon {
-  border-color: rgba(57, 208, 216, 0.5);
+  border-color: var(--app-accent-border);
 }
 
 .cf-step:not(:last-child)::after {
@@ -95,20 +95,20 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #7a8fa6;
+  color: var(--app-muted);
   z-index: 2;
 }
 
 .cf-step.active .cf-step-icon {
-  background: #39d0d8;
-  border-color: #39d0d8;
-  color: #fff;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-ink);
 }
 
 .cf-step.completed .cf-step-icon {
-  background: #39d0d8;
-  border-color: #39d0d8;
-  color: #0b1221;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-bg);
 }
 
 .cf-step-content {
@@ -118,30 +118,30 @@
 
 .cf-step-title {
   font-size: 14px;
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-weight: 500;
 }
 
 .cf-step-desc {
   font-size: 16px;
-  color: #e6f0ff;
+  color: var(--app-ink);
   font-weight: 600;
 }
 
 .cf-step:not(.active):not(.completed) .cf-step-desc {
-  color: #7a8fa6;
+  color: var(--app-muted);
 }
 
 .cf-note-card {
-  background: #0b1221;
+  background: var(--app-bg);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 20px;
 }
 
 .cf-note-exclamation {
-  border: 1px solid #39d0d8;
-  color: #39d0d8;
+  border: 1px solid var(--app-accent);
+  color: var(--app-accent);
   border-radius: 50%;
   width: 18px;
   height: 18px;
@@ -156,14 +156,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #39d0d8;
+  color: var(--app-accent);
   font-weight: 600;
   margin-bottom: 8px;
   font-size: 14px;
 }
 
 .cf-note-text {
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 13px;
   line-height: 1.5;
   letter-spacing: normal;
@@ -183,7 +183,7 @@
   left: 0;
   right: 0;
   height: 40px;
-  background: linear-gradient(transparent, #0b1221);
+  background: linear-gradient(transparent, var(--app-bg));
 }
 
 .cf-note-text.expanded {
@@ -193,7 +193,7 @@
 .cf-note-show-more {
   background: none;
   border: none;
-  color: #39d0d8;
+  color: var(--app-accent);
   cursor: pointer;
   padding: 0;
   font-size: 13px;
@@ -208,6 +208,7 @@
 
 .cf-title {
   font-size: 24px;
+  color: var(--app-accent);
   font-weight: 600;
   margin-bottom: 24px;
   display: flex;
@@ -216,11 +217,11 @@
 }
 
 .cf-card {
-  background: rgba(14, 22, 39, 0.92);
-  border: 1px solid rgba(35, 50, 82, 0.95);
+  background: var(--form-panel-bg);
+  border: 1px solid var(--form-panel-border);
   border-radius: 16px;
   padding: 30px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 60px var(--app-shadow);
 }
 
 /* Step 1: Pool Selection */
@@ -234,8 +235,8 @@
 }
 
 .cf-pool-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -246,8 +247,8 @@
 }
 
 .cf-pool-card:hover, .cf-pool-card.selected {
-  background: rgba(57, 208, 216, 0.05);
-  border-color: #39d0d8;
+  background: var(--app-accent-soft);
+  border-color: var(--app-accent-border);
 }
 
 .cf-pool-icons {
@@ -264,7 +265,7 @@
   justify-content: center;
   font-size: 10px;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--app-ink);
 }
 
 .cf-pool-icon:last-child {
@@ -284,15 +285,15 @@
 
 .cf-pool-id {
   font-size: 12px;
-  color: #7a8fa6;
+  color: var(--app-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
 }
 
-.cf-pool-cyan {
-  color: #39d0d8;
+.cf-pool-accent {
+  color: var(--app-accent);
 }
 
 .cf-copy-btn {
@@ -304,7 +305,7 @@
 }
 
 .cf-copy-check {
-  color: #39d0d8;
+  color: var(--app-action);
   font-size: 12px;
 }
 
@@ -318,7 +319,7 @@
 .cf-add-another {
   background: transparent;
   border: none;
-  color: #39d0d8;
+  color: var(--app-accent);
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
@@ -342,7 +343,18 @@
   align-items: center;
   margin-bottom: 16px;
   font-weight: 600;
-  color: #e6f0ff;
+  color: var(--app-ink);
+}
+
+.cf-reward-slot-badge {
+  background: var(--app-accent-soft, rgba(59, 130, 246, 0.15));
+  color: var(--app-accent, #3b82f6);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .cf-reward-delete {
@@ -359,23 +371,24 @@
 .cf-label {
   display: block;
   font-size: 12px;
-  color: #7a8fa6;
+  color: var(--app-action);
   margin-bottom: 8px;
 }
 
 .cf-input {
   width: 100%;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
   border-radius: 8px;
   padding: 12px 16px;
-  color: #fff;
+  color: var(--app-ink);
   font-size: 16px;
   outline: none;
 }
 
 .cf-input:focus {
-  border-color: #39d0d8;
+  border-color: var(--form-border-focus);
+  box-shadow: 0 0 0 3px var(--form-focus-ring);
 }
 
 .cf-dates-row {
@@ -393,7 +406,7 @@
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 12px;
-  color: #e6f0ff;
+  color: var(--app-ink);
   white-space: nowrap;
 }
 
@@ -406,23 +419,23 @@
 
 .cf-btn-back {
   background: transparent;
-  border: 1px solid #39d0d8;
-  color: #39d0d8;
+  border: 1px solid var(--app-accent);
+  color: var(--app-accent);
   padding: 12px 30px;
-  border-radius: 8px;
+  border-radius: 8px; 
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .cf-btn-back:hover {
-  background: rgba(57, 208, 216, 0.1);
+  background: var(--app-accent-soft);
 }
 
 .cf-btn-next {
-  background: #39d0d8;
+  background: var(--app-accent);
   border: none;
-  color: #0b1221;
+  color: var(--app-bg);
   padding: 12px 40px;
   border-radius: 8px;
   font-weight: 600;
@@ -431,12 +444,11 @@
 }
 
 .cf-btn-next:hover {
-  opacity: 0.9;
+  filter: brightness(0.7);
 }
 
 .cf-btn-next:disabled {
-  background: #2a3b4c;
-  color: #7a8fa6;
+  filter: brightness(0.8);
   cursor: not-allowed;
 }
 
@@ -450,12 +462,12 @@
 }
 
 .cf-review-label {
-  color: #7a8fa6;
+  color: var(--app-muted);
 }
 
 .cf-review-value {
   font-weight: 600;
-  color: #e6f0ff;
+  color: var(--app-ink);
 }
 
 .cf-pool-select-wrap::-webkit-scrollbar {
@@ -466,6 +478,19 @@
   border-radius: 8px;
 }
 .cf-pool-select-wrap::-webkit-scrollbar-thumb {
-  background: #39d0d8;
+  background: var(--app-accent);
   border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+  .cf-page { padding: 96px 16px 48px; }
+  .cf-main { flex-direction: column; gap: 20px; }
+  .cf-sidebar { width: 100%; }
+  .cf-stepper { padding: 16px; gap: 10px; }
+  .cf-step:not(:last-child)::after { display: none; }
+  .cf-card { padding: 18px; }
+  .cf-title { font-size: 20px; }
+  .cf-dates-row { flex-direction: column; align-items: stretch; }
+  .cf-actions { flex-direction: column-reverse; gap: 10px; }
+  .cf-actions button { width: 100%; }
 }

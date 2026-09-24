@@ -1,34 +1,40 @@
 .clmm-page {
   min-height: 100vh;
   padding: clamp(88px, 9vw, 112px) clamp(16px, 2.8vw, 28px) clamp(56px, 5vw, 72px);
-  color: #d8e5ff;
-  background:
-    radial-gradient(circle at top left, rgba(70, 154, 255, 0.16), transparent 28%),
-    radial-gradient(circle at top right, rgba(57, 208, 216, 0.14), transparent 24%),
-    linear-gradient(180deg, #0a1020 0%, #07101d 100%);
+  color: var(--app-ink);
+  background:var(--app-bg);
 }
 
 .clmm-form-top {
   max-width: 1280px;
-  margin: 0 auto 18px;
+  margin: 24px auto 32px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
+  position: relative;
 }
 
 .clmm-back-link {
-  color: #8ea4c4;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--app-accent-border);
+  color: var(--app-accent);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 15px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
 }
 
 .clmm-back-link:hover {
-  color: #f4f8ff;
+  background: var(--app-accent-soft);
+  color: var(--app-ink);
 }
 
 .clmm-form-title {
-  color: #f4f8ff;
+  color: var(--app-accent);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -47,8 +53,8 @@
   align-items: center;
   padding: 18px 20px;
   border-radius: 18px;
-  border: 1px solid rgba(44, 60, 92, 0.95);
-  background: rgba(16, 25, 45, 0.84);
+  border: 1px solid var(--form-panel-border);
+  background: var(--form-panel-bg);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
   margin-bottom: 18px;
 }
@@ -70,16 +76,16 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid #0a1020;
+  border: 2px solid var(--app-bg);
 }
 
 .deposit-icon-a {
-  background: linear-gradient(135deg, #39d0d8, #2b6cb0);
+  background: linear-gradient(135deg, var(--app-accent), var(--app-rose));
 }
 
 .deposit-icon-b {
   margin-left: -10px;
-  background: linear-gradient(135deg, #9945ff, #14f195);
+  background: linear-gradient(135deg, var(--app-rose), var(--app-accent));
 }
 
 .deposit-hero-copy {
@@ -95,8 +101,8 @@
 
 .deposit-pool-name-row h1 {
   margin: 0;
-  color: #f4f8ff;
-  font-size: clamp(22px, 2vw, 30px);
+  color: var(--app-ink);
+  font-size: 22px;
   line-height: 1.1;
 }
 
@@ -105,15 +111,15 @@
   align-items: center;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(90, 106, 146, 0.42);
-  color: #c7d4ef;
+  background: var(--app-accent-soft);
+  color: var(--app-muted-strong);
   font-size: 12px;
   font-weight: 700;
 }
 
 .deposit-hero-copy p {
   margin: 8px 0 0;
-  color: #87a0c5;
+  color: var(--app-muted);
   font-size: 14px;
   line-height: 1.55;
 }
@@ -138,7 +144,7 @@
 .deposit-range-field span,
 .deposit-panel-head p,
 .deposit-token-sub {
-  color: #87a0c5;
+  color: var(--app-muted);
   font-size: 12px;
 }
 
@@ -146,7 +152,7 @@
 .deposit-chart-legend strong,
 .deposit-total-card strong,
 .deposit-apr-body strong {
-  color: #f4f8ff;
+  color: var(--app-ink);
   font-size: 14px;
 }
 
@@ -161,9 +167,9 @@
   position: relative;
   padding: 18px;
   border-radius: 22px;
-  background: rgba(14, 22, 39, 0.92);
-  border: 1px solid rgba(44, 60, 92, 0.95);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  background: var(--form-panel-bg);
+  border: 1px solid var(--form-panel-border);
+  box-shadow: 0 24px 60px var(--app-shadow);
 }
 
 .deposit-panel-content {
@@ -182,7 +188,7 @@
 
 .deposit-panel-head h2 {
   margin: 0;
-  color: #f4f8ff;
+  color: var(--app-ink);
   font-size: 20px;
 }
 
@@ -191,8 +197,8 @@
   align-items: center;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(90, 106, 146, 0.42);
-  color: #c7d4ef;
+  background: var(--app-accent-soft);
+  color: var(--app-muted-strong);
   font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
@@ -207,8 +213,8 @@
 .deposit-chart-card {
   padding: 16px;
   border-radius: 18px;
-  background: rgba(8, 15, 28, 0.86);
-  border: 1px solid rgba(36, 50, 79, 0.9);
+  background: var(--form-bg);
+  border: 1px solid var(--form-border);
 }
 
 /* recharts area wrapper */
@@ -227,7 +233,7 @@
 .chart-y-title {
   font-size: 11px;
   font-weight: 600;
-  color: #5a7a9c;
+  color: var(--app-muted);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   margin-left: 38px;
@@ -235,8 +241,8 @@
 
 /* Custom tooltip */
 .chart-tooltip {
-  background: rgba(10, 18, 38, 0.96);
-  border: 1px solid rgba(57, 208, 216, 0.4);
+  background: var(--form-panel-bg);
+  border: 1px solid var(--app-accent-border);
   border-radius: 10px;
   padding: 10px 14px;
   min-width: 140px;
@@ -248,7 +254,7 @@
   justify-content: space-between;
   gap: 16px;
   font-size: 12px;
-  color: #8ea4c4;
+  color: var(--app-muted);
 }
 
 .chart-tooltip-row+.chart-tooltip-row {
@@ -256,16 +262,16 @@
 }
 
 .chart-tooltip-row strong {
-  color: #d8e5ff;
+  color: var(--app-ink);
   font-weight: 700;
 }
 
 /* drag handles are no longer used in recharts chart – keep stub for future use */
 
 .deposit-price-toggle {
-  border: 1px solid rgba(125, 92, 255, 0.4);
-  background: rgba(125, 92, 255, 0.12);
-  color: #f0e8ff;
+  border: 1px solid var(--app-accent-border);
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 12px;
@@ -275,7 +281,7 @@
 }
 
 .deposit-price-toggle:hover {
-  background: rgba(125, 92, 255, 0.18);
+  background: var(--app-accent-border);
 }
 
 /* .deposit-range-line replaced by ReferenceLine in recharts */
@@ -322,18 +328,18 @@
   justify-content: center;
   font-weight: 800;
   font-size: 11px;
-  color: #fff;
+  color: var(--app-ink);
   border: 2px solid rgba(8, 15, 28, 0.9);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   letter-spacing: -0.5px;
   flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px var(--app-shadow);
 }
 
 .df-token-name {
   font-size: 13px;
   font-weight: 700;
-  color: #c8d8f0;
+  color: var(--app-muted-strong);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -357,18 +363,20 @@
 }
 
 .deposit-range-field input {
-  border: 1px solid rgba(44, 60, 92, 0.95);
-  background: rgba(8, 15, 28, 0.9);
-  color: #f4f8ff;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
+  color: var(--app-ink);
   border-radius: 14px;
   padding: 14px 16px;
   font-size: 14px;
   outline: none;
+  transition: all 0.2s ease;
 }
 
+.deposit-range-field input:hover,
 .deposit-range-field input:focus {
-  border-color: rgba(57, 208, 216, 0.8);
-  box-shadow: 0 0 0 3px rgba(57, 208, 216, 0.12);
+  border-color: var(--form-border-focus);
+  background: var(--form-bg-hover);
 }
 
 .deposit-range-pills {
@@ -380,9 +388,9 @@
 
 .deposit-range-pill,
 .deposit-range-reset {
-  border: 1px solid rgba(76, 95, 131, 0.85);
-  background: rgba(10, 18, 33, 0.88);
-  color: #90a6c6;
+  border: 1px solid var(--app-accent-border);
+  background: var(--form-bg);
+  color: var(--app-accent-border);
   padding: 8px 12px;
   border-radius: 10px;
   font-size: 12px;
@@ -390,8 +398,8 @@
 }
 
 .deposit-range-pill.active {
-  border-color: rgba(180, 194, 229, 0.95);
-  color: #e8f0ff;
+  border-color: var(--app-accent);
+  color: var(--app-accent);
 }
 
 .deposit-range-reset {
@@ -402,8 +410,8 @@
 
 .deposit-apr-card {
   border-radius: 18px;
-  border: 1px solid rgba(44, 60, 92, 0.95);
-  background: rgba(8, 15, 28, 0.78);
+  border: 1px solid var(--form-panel-border);
+  background: var(--form-panel-bg);
   padding: 16px;
 }
 
@@ -415,7 +423,7 @@
 }
 
 .deposit-apr-head strong {
-  color: #dce7ff;
+  color: var(--app-ink);
   font-size: 15px;
 }
 
@@ -447,10 +455,10 @@
   justify-content: center;
   gap: 10px;
   border-radius: 18px;
-  background: rgba(7, 12, 24, 0.55);
+  background: color-mix(in srgb, var(--form-panel-bg) 88%, transparent);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 143, 208, 0.22);
+  border: 1px solid var(--app-accent-border);
   text-align: center;
   z-index: 2;
 }
@@ -461,21 +469,21 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255, 143, 208, 0.22), rgba(125, 92, 255, 0.18));
-  color: #ffd7ef;
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
   font-size: 26px;
-  box-shadow: 0 0 0 1px rgba(255, 143, 208, 0.2), 0 10px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 0 0 1px var(--app-accent-border), 0 10px 24px var(--app-shadow-soft);
 }
 
 .deposit-panel-lock-title {
-  color: #ffeef8;
+  color: var(--app-ink);
   font-size: 17px;
   font-weight: 800;
 }
 
 .deposit-panel-lock-copy {
   max-width: 280px;
-  color: #9fb0d1;
+  color: var(--app-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -492,9 +500,16 @@
 
 .deposit-token-card {
   border-radius: 18px;
-  border: 1px solid rgba(44, 60, 92, 0.95);
-  background: rgba(8, 15, 28, 0.86);
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
   padding: 14px 16px 16px;
+  transition: all 0.3s ease;
+}
+
+.deposit-token-card:hover,
+.deposit-token-card:focus-within {
+  border-color: var(--form-border-focus);
+  background: var(--form-bg-hover);
 }
 
 .deposit-token-top {
@@ -512,7 +527,7 @@
 }
 
 .deposit-token-badge {
-  color: #8fa5c7;
+  color: var(--app-muted-strong);
   font-size: 12px;
   font-weight: 700;
 }
@@ -523,12 +538,12 @@
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 700;
-  color: #7b8baa;
-  background: rgba(69, 82, 117, 0.48);
+  color: var(--app-muted-strong);
+  background: var(--app-accent-soft);
 }
 
 .deposit-token-balance {
-  color: #dce7ff;
+  color: var(--app-ink);
   font-size: 20px;
   font-weight: 700;
 }
@@ -548,7 +563,7 @@
 }
 
 .deposit-token-symbol strong {
-  color: #f4f8ff;
+  color: var(--app-ink);
   font-size: 18px;
 }
 
@@ -560,11 +575,11 @@
 }
 
 .dot-0 {
-  background: linear-gradient(135deg, #39d0d8, #2b6cb0);
+  background: linear-gradient(135deg, var(--app-accent), var(--app-rose));
 }
 
 .dot-1 {
-  background: linear-gradient(135deg, #7d5cff, #ff8fd0);
+  background: linear-gradient(135deg, var(--app-accent), var(--app-rose));
 }
 
 .deposit-token-row input {
@@ -573,14 +588,14 @@
   border: 0;
   outline: none;
   background: transparent;
-  color: #f4f8ff;
+  color: var(--app-ink);
   text-align: right;
   font-size: 32px;
   font-weight: 700;
 }
 
 .deposit-token-row input:focus {
-  color: #dffcff;
+  color: var(--app-action);
 }
 
 .deposit-token-sub {
@@ -595,8 +610,8 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(180, 194, 229, 0.2);
-  color: #dffcff;
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
   font-size: 28px;
   line-height: 1;
 }
@@ -607,7 +622,7 @@
   gap: 16px;
   padding: 18px;
   border-radius: 18px;
-  background: rgba(91, 103, 136, 0.26);
+  background: var(--app-surface);
 }
 
 .deposit-total-card>div {
@@ -622,7 +637,7 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  color: #f4f8ff;
+  color: var(--app-ink);
   font-size: 14px;
 }
 
@@ -630,13 +645,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(57, 208, 216, 0.08);
-  border: 1px solid rgba(57, 208, 216, 0.18);
+  background: var(--app-accent-soft);
+  border: 1px solid var(--app-accent-border);
   border-radius: 999px;
   padding: 3px 10px 3px 4px;
   font-size: 13px;
   font-weight: 700;
-  color: #d8e5ff;
+  color: var(--app-ink);
 }
 
 .deposit-total-sphere {
@@ -648,7 +663,7 @@
   justify-content: center;
   font-weight: 800;
   font-size: 8px;
-  color: #fff;
+  color: var(--app-ink);
   flex-shrink: 0;
   border: 1px solid rgba(8, 15, 28, 0.7);
 }
@@ -656,7 +671,7 @@
 .deposit-total-sep {
   font-size: 14px;
   font-weight: 700;
-  color: #6a85ab;
+  color: var(--app-muted);
   padding: 0 2px;
 }
 
@@ -665,14 +680,30 @@
   border: 0;
   border-radius: 12px;
   padding: 14px 18px;
-  background: linear-gradient(180deg, #2b7f95 0%, #2f8aa4 100%);
-  color: #081120;
+  background: var(--btn-solid-bg);
+  color: var(--btn-solid-text);
   font-size: 14px;
   font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--app-accent-border);
+  transition: all 0.3s ease;
+}
+
+.deposit-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: var(--btn-solid-hover-bg);
+  box-shadow: 0 6px 20px var(--app-accent-border);
+}
+
+.deposit-submit:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .deposit-submit:disabled {
+  background: var(--app-overlay-08);
+  color: var(--app-muted);
   opacity: 0.55;
+  box-shadow: none;
 }
 
 .clmm-page .tx-card {
@@ -713,6 +744,16 @@
 @media (max-width: 780px) {
   .clmm-page {
     padding: 96px 16px 56px;
+  }
+
+  .clmm-form-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .clmm-back-link {
+    position: static;
   }
 
   .deposit-grid,
@@ -757,6 +798,67 @@
   .deposit-range-reset {
     padding-inline: 10px;
   }
+
+  .deposit-submit {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    display: block;
+  }
+}
+
+@media (max-width: 520px) {
+  .deposit-shell {
+    width: 100%;
+  }
+
+  .deposit-panel,
+  .deposit-chart-card,
+  .deposit-token-card {
+    border-radius: 14px;
+  }
+
+  .deposit-panel {
+    padding: 14px;
+  }
+
+  .deposit-chart-card {
+    padding: 10px;
+  }
+
+  .deposit-chart-legend {
+    gap: 10px;
+  }
+
+  .deposit-chart-legend>div {
+    min-width: 100%;
+  }
+
+  .deposit-price-toggle {
+    width: 100%;
+    text-align: center;
+  }
+
+  .deposit-range-pills {
+    gap: 6px;
+  }
+
+  .deposit-range-pill,
+  .deposit-range-reset {
+    flex: 1 1 auto;
+  }
+
+  .deposit-token-row input {
+    font-size: 24px;
+  }
+
+  .deposit-balance-box {
+    flex-wrap: wrap;
+  }
+
+  .nft-overlay-card {
+    padding: 28px 18px 22px;
+  }
 }
 
 /* ── Symbol sphere icons ── */
@@ -780,7 +882,7 @@
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
-  color: #fff;
+  color: var(--app-ink);
   border: 2px solid rgba(8, 15, 28, 0.95);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
   letter-spacing: -0.5px;
@@ -804,11 +906,11 @@
   z-index: 200;
   min-width: 300px;
   padding: 12px 14px;
-  background: rgba(14, 22, 40, 0.97);
-  border: 1px solid rgba(44, 60, 92, 0.95);
+  background: var(--form-panel-bg);
+  border: 1px solid var(--form-panel-border);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  color: #e6f0ff;
+  color: var(--app-ink);
   font-size: 12px;
   line-height: 1.4;
   pointer-events: auto;
@@ -827,15 +929,15 @@
 }
 
 .deposit-hover-card strong {
-  color: #39d0d8;
+  color: var(--app-accent);
   white-space: nowrap;
   margin-right: 4px;
 }
 
 .deposit-copy-btn {
-  background: rgba(57, 208, 216, 0.08);
-  border: 1px solid #39d0d8;
-  color: #39d0d8;
+  background: var(--app-accent-soft);
+  border: 1px solid var(--app-accent);
+  color: var(--app-accent);
   padding: 4px 6px;
   border-radius: 6px;
   cursor: pointer;
@@ -852,8 +954,7 @@
 }
 
 .deposit-copy-btn:hover {
-  background: #39d0d8;
-  color: #061014;
+  filter: brightness(0.8);
 }
 
 .deposit-copy-btn:active {
@@ -862,7 +963,7 @@
 
 .copy-status-inline {
   font-size: 12px;
-  color: #14f195;
+  color: var(--app-accent);
   font-weight: 700;
 }
 
@@ -893,17 +994,17 @@
   position: absolute;
   inset: 0;
   width: 2px;
-  background: linear-gradient(180deg, rgba(57, 208, 216, 0.9), rgba(57, 208, 216, 0.3));
+  background: linear-gradient(180deg, var(--app-pointer), var(--app-accent-border));
   border-radius: 1px;
   pointer-events: none;
 }
 
 .chart-drag-handle-lower .chart-drag-handle-line {
-  background: linear-gradient(180deg, rgba(20, 241, 149, 0.9), rgba(20, 241, 149, 0.3));
+  background: linear-gradient(180deg, var(--app-pointer), var(--app-accent-border));
 }
 
 .chart-drag-handle-upper .chart-drag-handle-line {
-  background: linear-gradient(180deg, rgba(20, 241, 149, 0.9), rgba(20, 241, 149, 0.3));
+  background: linear-gradient(180deg, var(--app-pointer), var(--app-accent-border));
 }
 
 .chart-drag-handle-grip {
@@ -914,9 +1015,9 @@
   width: 22px;
   height: 28px;
   border-radius: 6px;
-  background: rgba(14, 22, 40, 0.95);
-  border: 1.5px solid rgba(20, 241, 149, 0.6);
-  color: #14f195;
+  background: var(--form-panel-bg);
+  border: 1.5px solid var(--app-pointer);
+  color: var(--app-pointer);
   font-size: 10px;
   display: flex;
   align-items: center;
@@ -927,21 +1028,21 @@
 }
 
 .chart-drag-handle:hover .chart-drag-handle-grip {
-  background: rgba(20, 241, 149, 0.15);
-  border-color: #14f195;
+  background: var(--app-accent-soft);
+  border-color: var(--app-pointer);
   transform: translate(-50%, -50%) scale(1.1);
 }
 
 .chart-drag-handle:active .chart-drag-handle-grip {
-  background: rgba(20, 241, 149, 0.25);
-  border-color: #14f195;
+  background: var(--app-accent-border);
+  border-color: var(--app-pointer);
 }
 
 /* ── Chart empty state ── */
 .chart-empty-state {
   padding: 24px 16px;
   text-align: center;
-  color: #5a7a9c;
+  color: var(--app-muted);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -951,7 +1052,7 @@
 .deposit-input-disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  background: rgba(30, 40, 60, 0.5) !important;
+  background: var(--app-overlay-08) !important;
 }
 
 
@@ -969,7 +1070,7 @@
 .nft-overlay-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 8, 20, 0.82);
+  background: var(--app-shadow-strong);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -980,12 +1081,12 @@
   width: min(100%, 440px);
   border-radius: 24px;
   padding: 36px 32px 28px;
-  background: linear-gradient(160deg, rgba(15, 24, 50, 0.98) 0%, rgba(8, 14, 32, 0.98) 100%);
-  border: 1px solid rgba(57, 208, 216, 0.35);
+  background: linear-gradient(160deg, var(--form-panel-bg) 0%, var(--app-bg-dim) 100%);
+  border: 1px solid var(--app-accent-border);
   box-shadow:
-    0 0 0 1px rgba(57, 208, 216, 0.08),
+    0 0 0 1px var(--app-accent-soft),
     0 32px 80px rgba(0, 0, 0, 0.65),
-    0 0 60px rgba(57, 208, 216, 0.08);
+    0 0 60px var(--app-accent-soft);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1014,7 +1115,7 @@
   width: 240px;
   height: 240px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(20, 241, 149, 0.22) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--app-accent-soft) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -1022,9 +1123,9 @@
   position: absolute;
   top: 14px;
   right: 16px;
-  background: rgba(57, 208, 216, 0.1);
-  border: 1px solid rgba(57, 208, 216, 0.3);
-  color: #8ea4c4;
+  background: var(--app-accent-soft);
+  border: 1px solid var(--app-accent-border);
+  color: var(--app-muted);
   border-radius: 8px;
   width: 30px;
   height: 30px;
@@ -1037,28 +1138,28 @@
 }
 
 .nft-overlay-close:hover {
-  background: rgba(57, 208, 216, 0.22);
-  color: #d8f8ff;
+  background: var(--app-accent-border);
+  color: var(--app-ink);
 }
 
 .nft-overlay-icon {
   font-size: 52px;
   line-height: 1;
-  filter: drop-shadow(0 0 16px rgba(20, 241, 149, 0.5));
+  filter: drop-shadow(0 0 16px var(--app-accent-border));
 }
 
 .nft-overlay-title {
   margin: 0;
   font-size: 22px;
   font-weight: 800;
-  color: #f4f8ff;
+  color: var(--app-ink);
   letter-spacing: -0.3px;
 }
 
 .nft-overlay-subtitle {
   margin: 0;
   font-size: 13px;
-  color: #7a98c2;
+  color: var(--app-muted);
   line-height: 1.5;
   max-width: 320px;
 }
@@ -1071,14 +1172,14 @@
   gap: 12px;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(57, 208, 216, 0.07);
-  border: 1px solid rgba(57, 208, 216, 0.15);
+  background: var(--app-accent-soft);
+  border: 1px solid var(--app-accent-soft);
 }
 
 .nft-detail-label {
   font-size: 11px;
   font-weight: 700;
-  color: #5a7a9c;
+  color: var(--app-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
@@ -1087,7 +1188,7 @@
 .nft-detail-value {
   font-size: 12px;
   font-weight: 600;
-  color: #c8d8f0;
+  color: var(--app-ink);
   font-family: 'Courier New', monospace;
   word-break: break-all;
   text-align: right;
@@ -1098,8 +1199,8 @@
   margin-top: 4px;
   padding: 13px 20px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #39d0d8, #14f195);
-  color: #061014;
+  background: linear-gradient(135deg, var(--app-accent), var(--app-accent));
+  color: var(--btn-solid-text);
   font-size: 14px;
   font-weight: 800;
   text-decoration: none;
@@ -1116,8 +1217,8 @@
 
 .nft-overlay-dismiss {
   background: transparent;
-  border: 1px solid rgba(60, 80, 120, 0.7);
-  color: #6a85ab;
+  border: 1px solid var(--app-border-strong);
+  color: var(--app-muted);
   border-radius: 10px;
   padding: 9px 20px;
   font-size: 13px;
@@ -1128,8 +1229,8 @@
 }
 
 .nft-overlay-dismiss:hover {
-  border-color: rgba(57, 208, 216, 0.5);
-  color: #9ec5e0;
+  border-color: var(--app-accent-border);
+  color: var(--app-accent);
 }
 
 .deposit-token-locked-overlay {
@@ -1140,7 +1241,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: rgba(11, 18, 33, 0.75);
+  background: color-mix(in srgb, var(--form-panel-bg) 88%, transparent);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   border-radius: 18px;
@@ -1154,13 +1255,13 @@
 }
 
 .deposit-token-locked-title {
-  color: #e6f0ff;
+  color: var(--app-ink);
   font-size: 15px;
   font-weight: 700;
 }
 
 .deposit-token-locked-desc {
-  color: #7a8fa6;
+  color: var(--app-muted);
   font-size: 13px;
   max-width: 80%;
 }
@@ -1171,14 +1272,16 @@
   pointer-events: none;
   user-select: none;
 }
+
 .deposit-token-card-invalid {
-  border-color: rgba(239, 68, 68, 0.5) !important;
-  background: rgba(239, 68, 68, 0.05) !important;
+  border-color: var(--app-error) !important;
+  background: color-mix(in srgb, var(--app-error) 8%, var(--form-bg)) !important;
 }
 
-.insufficient-balance-btn:disabled, .insufficient-balance-btn[disabled] {
-  background: #555 !important;
-  color: #aaa !important;
+.insufficient-balance-btn:disabled,
+.insufficient-balance-btn[disabled] {
+  background: var(--app-overlay-12) !important;
+  color: var(--app-muted) !important;
   cursor: not-allowed !important;
   box-shadow: none !important;
   opacity: 1 !important;

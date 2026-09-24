@@ -28,12 +28,12 @@
 }
 
 .tx-card--success .tx-card__progress-bar {
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, var(--app-success), var(--app-success));
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
 }
 
 .tx-card--error .tx-card__progress-bar {
-  background: linear-gradient(90deg, #ef4444, #f87171);
+  background: linear-gradient(90deg, var(--app-error), var(--app-error));
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
 }
 
@@ -62,11 +62,11 @@
 }
 
 .tx-card--success {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid var(--app-success);
 }
 
 .tx-card--error {
-  border-left: 4px solid #ef4444;
+  border-left: 4px solid var(--app-error);
 }
 
 .tx-card--info {
@@ -107,12 +107,12 @@
 
 .tx-card--success .tx-card__badge {
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--app-success);
 }
 
 .tx-card--error .tx-card__badge {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  color: var(--app-error);
 }
 
 .tx-card--info .tx-card__badge {
