@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../../assets/helux-logo.svg';
 
@@ -11,8 +11,31 @@ const NAV_LINKS = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  // TODO: drive this from scroll position (e.g. IntersectionObserver)
-  const activeId = 'about';
+  const [activeId, setActiveId] = useState('about');
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        });
+      },
+      {
+        rootMargin: '-120px 0px -60% 0px', // Trigger slightly below the fixed header
+      }
+    );
+
+    NAV_LINKS.forEach(({ id }) => {
+      const element = document.getElementById(id);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <header className="site-header">
