@@ -70,7 +70,7 @@ body {
   --app-muted-strong: #C5C0DF;
   --app-accent: var(--accent);
   --app-accent-bright: var(--accent-bright);
-  --app-chart: var(--accent-tint);
+  --app-chart: var(--accent);
   --app-pointer: var(--accent);
   --app-current: var(--app-error);
   --app-accent-soft: var(--accent-soft);
