@@ -14,7 +14,7 @@ import { PositionsProvider } from './contexts/PositionsContext'
 import { TxProvider } from './contexts/TxContext'
 
 import { TokenRegistryProvider } from './contexts/TokenRegistryContext'
-import About from './pages/About/About'
+import LandingPage from './pages/About/LandingPage'
 import { useLocation } from 'react-router-dom'
 
 function App() {
@@ -28,7 +28,7 @@ function App() {
             {location.pathname !== '/' && <Header />}
             <main>
               <Routes>
-                <Route path='/' element={<About />} />
+                <Route path='/' element={<LandingPage />} />
                 <Route path='/liquidity' element={<Liquidity />} />
                 <Route path='/swap' element={<Swap />} />
                 <Route path='/liquidity/create' element={<InitializeForm />} />

@@ -12,7 +12,7 @@ body {
 
 :root {
   --font-body: 'Space Grotesk', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-  --font-heading:  'Space Grotesk', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --font-heading: 'Space Grotesk', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
   --font-mono: ui-monospace, Consolas, monospace;
 
   --sans: var(--font-body);
@@ -42,48 +42,66 @@ body {
   --letter-spacing-normal: 0.18px;
   --letter-spacing-loose: 0.5px;
 
+  /* Landing Page Tokens */
+  --bg: #07060d;
+  --surface: #0f0e17;
+  --surface-2: #16151f;
+  --surface-3: #1e1c2a;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  --text: #f1eefc;
+  --text-muted: #a9a4c2;
+  --text-dim: #7d7896;
+
+  --accent: #7c5cff;
+  --accent-bright: #9d85ff;
+  --accent-soft: rgba(124, 92, 255, 0.16);
+  --accent-tint: rgba(124, 92, 255, 0.09);
+  --bar-idle: #262433;
+
   /* Shared application palette. The About page is the visual reference. */
-  --app-bg: #30332e;
-  --app-bg-dim: #292c28;
-  --app-surface: #3a3d37;
-  --app-surface-strong: #41443d;
-  --app-ink: #f3eee4;
-  --app-muted: #B4B2A9;
-  --app-muted-strong: #D0CCC3;
-  --app-accent: #EFBF04;
-  --app-accent-bright: #EFBF04;
-  --app-chart: var(--app-accent-border);
-  --app-pointer: var(--app-accent);
+  --app-bg: var(--bg);
+  --app-bg-dim: #050409;
+  --app-surface: var(--surface);
+  --app-surface-strong: var(--surface-2);
+  --app-ink: var(--text);
+  --app-muted: var(--text-muted);
+  --app-muted-strong: #C5C0DF;
+  --app-accent: var(--accent);
+  --app-accent-bright: var(--accent-bright);
+  --app-chart: var(--accent-tint);
+  --app-pointer: var(--accent);
   --app-current: var(--app-error);
-  --app-accent-soft: #514C37;
-  --app-accent-border: #98834C;
-  --app-action: var(--app-accent);
-  --app-action-soft: var(--app-accent-soft);
-  --app-action-border: var(--app-accent-border);
-  --app-action-hover: var(--app-accent-border);
-  --form-bg: #292c28;
-  --form-bg-hover: #30332e;
-  --form-panel-bg: #20251f;
-  --form-panel-border: #4A4D46;
-  --listing-bg: var(--form-panel-bg);
-  --listing-bg-hover: var(--app-bg-dim);
-  --listing-border: var(--form-panel-border);
-  --form-border: #51534E;
-  --form-border-focus: var(--app-accent-border);
-  --form-label: var(--app-muted);
-  --form-focus-ring: var(--app-accent-soft);
-  --app-border: #4F514B;
-  --app-border-strong: #666761;
+  --app-accent-soft: var(--accent-soft);
+  --app-accent-border: #6D4CC3;
+  --app-action: var(--accent);
+  --app-action-soft: var(--accent-soft);
+  --app-action-border: var(--accent-tint);
+  --app-action-hover: var(--accent-bright);
+  --form-bg: var(--surface);
+  --form-bg-hover: var(--surface-2);
+  --form-panel-bg: var(--surface-2);
+  --form-panel-border: var(--line-strong);
+  --listing-bg: var(--surface-2);
+  --listing-bg-hover: var(--surface-3);
+  --listing-border: var(--line-strong);
+  --form-border: var(--line);
+  --form-border-focus: var(--accent);
+  --form-label: var(--text-muted);
+  --form-focus-ring: var(--accent-soft);
+  --app-border: var(--line);
+  --app-border-strong: var(--line-strong);
   --app-rose: #8e3b46;
   --app-success: #2bb900;
-  --app-error:  #cc1808;
-  --app-overlay-05: #3A3D37;
-  --app-overlay-08: #3F423C;
-  --app-overlay-12: #484A44;
-  --app-shadow-soft: #262925;
-  --app-shadow-strong: #181917;
-  --app-shadow: #222420;
-  --lp-fill-btn: #3A3D38;
+  --app-error: #cc1808;
+  --app-overlay-05: #1A1625;
+  --app-overlay-08: #231D31;
+  --app-overlay-12: #2E2741;
+  --app-shadow-soft: #07050A;
+  --app-shadow-strong: #030205;
+  --app-shadow: #050408;
+  --lp-fill-btn: #1A1625;
 
   /* Shared page-level aliases keep individual page styles on the same theme. */
   --page-control-bg: var(--app-action-soft);
@@ -97,14 +115,9 @@ body {
   --if-text-light: var(--app-ink);
   --if-text-secondary: var(--app-muted);
 
-  --text: var(--app-muted);
   --text-h: var(--app-ink);
-  --bg: var(--app-bg);
   --border: var(--app-border);
   --code-bg: var(--app-surface);
-  --accent: var(--app-accent);
-  --accent-bg: var(--app-accent-soft);
-  --accent-border: var(--app-accent-border);
   --social-bg: var(--app-overlay-05);
   --shadow: var(--app-shadow) 0 10px 15px -3px;
 
@@ -289,7 +302,7 @@ code {
   padding: 12px;
   width: 220px;
   z-index: 100;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .deposit-slippage-title {
@@ -341,7 +354,9 @@ code {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
+

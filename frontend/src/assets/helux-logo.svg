@@ -1,10 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="1400 650 2000 2000">
   <defs>
-    <!-- Helux golden-pollen brand color -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#EFBF04" />
-      <stop offset="50%" stop-color="#EFBF04" />
-      <stop offset="100%" stop-color="#EFBF04" />
+    <!-- Helux purple theme color -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9D85FF" />
+      <stop offset="100%" stop-color="#7C5CFF" />
     </linearGradient>
 
     <!-- Mask to extract the 'H' shape from the negative space -->

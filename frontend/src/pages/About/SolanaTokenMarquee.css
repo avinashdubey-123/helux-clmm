@@ -1,0 +1,104 @@
+.marquee-container {
+  width: 100%;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--about-page-bg) 80%, black);
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--about-line) 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--about-line) 40%, transparent);
+  display: flex;
+  white-space: nowrap;
+}
+
+.marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: scrollMarquee 30s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scrollMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background-color: color-mix(in srgb, var(--about-surface) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--about-line) 30%, transparent);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.marquee-item:hover {
+  background-color: var(--about-surface);
+  border-color: color-mix(in srgb, var(--about-line) 60%, transparent);
+}
+
+.marquee-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--about-surface);
+  object-fit: cover;
+}
+
+.marquee-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.marquee-symbol {
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.025em;
+  color: var(--about-ink);
+}
+
+.marquee-name {
+  font-size: 10px;
+  color: var(--about-muted);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.marquee-price-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-left: 12px;
+}
+
+.marquee-price {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 500;
+  color: var(--about-ink);
+}
+
+.marquee-change {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+.marquee-change.positive {
+  color: #34d399; /* emerald-400 */
+}
+
+.marquee-change.negative {
+  color: #fb7185; /* rose-400 */
+}
