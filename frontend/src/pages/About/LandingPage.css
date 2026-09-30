@@ -649,10 +649,6 @@ a {
   animation-direction: reverse;
 }
 
-.ticker:hover .ticker__track {
-  animation-play-state: paused;
-}
-
 /* the track holds the card set twice over, so -50% lands on an identical frame */
 @keyframes ticker-scroll {
   to {
