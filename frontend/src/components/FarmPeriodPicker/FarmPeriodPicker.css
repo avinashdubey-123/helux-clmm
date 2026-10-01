@@ -386,6 +386,7 @@
 
 .fpp-dropdown-option:hover {
   background: var(--form-bg-hover);
+  filter: brightness(0.8);
 }
 
 .fpp-dropdown-option.selected {

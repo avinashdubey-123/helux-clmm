@@ -137,6 +137,7 @@
 
 .token-selector-item:hover {
   background: var(--app-accent-soft);
+  filter: brightness(0.8);
 }
 
 .token-selector-item-main {

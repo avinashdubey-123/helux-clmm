@@ -1101,7 +1101,7 @@ export default function DepositForm() {
                   {depositMode === 'token1Only' && (
                     <div className="deposit-token-locked-overlay">
                       <div className="deposit-token-locked-icon">
-                        <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24, filter: 'invert(1)' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        <img src="/src/assets/lock.svg" alt="locked" style={{ width: 24, height: 24 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
                         {!document.querySelector('img[src="/src/assets/lock.svg"]') && "🔒"}
                       </div>
                       <div className="deposit-token-locked-title">Single asset deposit only.</div>

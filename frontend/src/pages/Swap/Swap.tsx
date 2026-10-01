@@ -95,7 +95,7 @@ export default function Swap() {
   const program = useProgram();
   const wallet = useWallet();
   const { connection } = useConnection();
-  
+
   const {
     pools: poolsData,
     loadingPools,
@@ -134,7 +134,7 @@ export default function Swap() {
         newDisplayPools.push(...enrichedBatch);
         // Progressively update state
         setDisplayPools([...newDisplayPools, ...poolsData.slice(i + batchSize)]);
-        
+
         // Short delay between batches
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -286,13 +286,13 @@ export default function Swap() {
       return 0.5;
     }
   });
-  
+
   useEffect(() => {
     try {
       localStorage.setItem('swap_slippage', slippage.toString());
-    } catch {}
+    } catch { }
   }, [slippage]);
-  
+
   const [showSlippageSelector, setShowSlippageSelector] = useState(false);
   const [lastEditedField, setLastEditedField] = useState<"input" | "output">(
     "input",
@@ -398,7 +398,7 @@ export default function Swap() {
   useEffect(() => {
     try {
       sessionStorage.setItem('swap_searchQuery', searchQuery);
-    } catch {}
+    } catch { }
   }, [searchQuery]);
   const [activePoolFeeTier, setActivePoolFeeTier] = useState<string>("-");
 
@@ -439,15 +439,15 @@ export default function Swap() {
             const coder = new anchor.BorshAccountsCoder(idlJson as any);
             try {
               configAcct = coder.decode("AmmConfig", info.data);
-            } catch (e) {}
+            } catch (e) { }
             if (!configAcct)
               try {
                 configAcct = coder.decode("ammConfig", info.data);
-              } catch (e) {}
+              } catch (e) { }
             if (!configAcct)
               try {
                 configAcct = coder.decode("amm_config", info.data);
-              } catch (e) {}
+              } catch (e) { }
           }
         }
 
@@ -492,7 +492,7 @@ export default function Swap() {
 
   const updateInputAmount = async (value: string) => {
     if (value === amountIn && lastEditedField === "input") return; // Only trigger if value or active field actually changes
-    
+
     setLastEditedField("input");
     setAmountIn(value);
 
@@ -603,11 +603,11 @@ export default function Swap() {
 
         const isSol0 =
           mint0Str.toLowerCase() ===
-            "so11111111111111111111111111111111111111112" ||
+          "so11111111111111111111111111111111111111112" ||
           mint0Str === "11111111111111111111111111111111";
         const isSol1 =
           mint1Str.toLowerCase() ===
-            "so11111111111111111111111111111111111111112" ||
+          "so11111111111111111111111111111111111111112" ||
           mint1Str === "11111111111111111111111111111111";
 
         if (dec0 === 0 && !isSol0) {
@@ -621,7 +621,7 @@ export default function Swap() {
               ),
             );
             dec0 = mInfo.decimals;
-          } catch (e) {}
+          } catch (e) { }
         }
         if (dec1 === 0 && !isSol1) {
           try {
@@ -634,7 +634,7 @@ export default function Swap() {
               ),
             );
             dec1 = mInfo.decimals;
-          } catch (e) {}
+          } catch (e) { }
         }
 
         let bal0 = 0;
@@ -649,11 +649,11 @@ export default function Swap() {
           try {
             const resp0 = await callWithRetry(() => connection.getParsedAccountInfo(mint0));
             if (resp0?.value?.owner) tokenProgram0 = resp0.value.owner;
-          } catch (e) {}
+          } catch (e) { }
           try {
             const resp1 = await callWithRetry(() => connection.getParsedAccountInfo(mint1));
             if (resp1?.value?.owner) tokenProgram1 = resp1.value.owner;
-          } catch (e) {}
+          } catch (e) { }
 
           if (isSol0) {
             const solBal = await callWithRetry(() => connection.getBalance(owner));
@@ -734,7 +734,7 @@ export default function Swap() {
       await navigator.clipboard.writeText(value);
       setCopiedText(value);
       setTimeout(() => setCopiedText(null), 2000);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -759,36 +759,36 @@ export default function Swap() {
     try {
       const resp0 = await callWithRetry(() => connection.getParsedAccountInfo(t0!));
       if (resp0?.value?.owner) inputTokenProgram = resp0.value.owner;
-    } catch (e) {}
+    } catch (e) { }
     try {
       const resp1 = await callWithRetry(() => connection.getParsedAccountInfo(t1!));
       if (resp1?.value?.owner) outputTokenProgram = resp1.value.owner;
-    } catch (e) {}
+    } catch (e) { }
     const inputTokenAccount = ownerPublicKey
       ? getAssociatedTokenAddressSync(
-          t0!,
-          ownerPublicKey,
-          true,
-          inputTokenProgram,
-        )
+        t0!,
+        ownerPublicKey,
+        true,
+        inputTokenProgram,
+      )
       : null;
     const outputTokenAccount = ownerPublicKey
       ? getAssociatedTokenAddressSync(
-          t1!,
-          ownerPublicKey,
-          true,
-          outputTokenProgram,
-        )
+        t1!,
+        ownerPublicKey,
+        true,
+        outputTokenProgram,
+      )
       : null;
 
     let mint0: any = { decimals: 9 };
     let mint1: any = { decimals: 9 };
     try {
       mint0 = await getMint(connection, t0!, "confirmed", inputTokenProgram);
-    } catch (e) {}
+    } catch (e) { }
     try {
       mint1 = await getMint(connection, t1!, "confirmed", outputTokenProgram);
-    } catch (e) {}
+    } catch (e) { }
 
     let poolStateAcct: any = null;
     if (program) {
@@ -799,15 +799,15 @@ export default function Swap() {
       const coder = new anchor.BorshAccountsCoder(idlJson as any);
       try {
         poolStateAcct = coder.decode("poolState", info.data);
-      } catch (e) {}
+      } catch (e) { }
       if (!poolStateAcct)
         try {
           poolStateAcct = coder.decode("pool_state", info.data);
-        } catch (e) {}
+        } catch (e) { }
       if (!poolStateAcct)
         try {
           poolStateAcct = coder.decode("PoolState", info.data);
-        } catch (e) {}
+        } catch (e) { }
       if (!poolStateAcct) throw new Error("Failed to decode pool state");
     }
 
@@ -868,19 +868,19 @@ export default function Swap() {
     const outputTokenProgram = inputIsToken0 ? ctx.outputTokenProgram : ctx.inputTokenProgram;
     const inputTokenAccount = ownerPublicKey
       ? getAssociatedTokenAddressSync(
-          inputMint,
-          ownerPublicKey,
-          true,
-          inputTokenProgram,
-        )
+        inputMint,
+        ownerPublicKey,
+        true,
+        inputTokenProgram,
+      )
       : null;
     const outputTokenAccount = ownerPublicKey
       ? getAssociatedTokenAddressSync(
-          outputMint,
-          ownerPublicKey,
-          true,
-          outputTokenProgram,
-        )
+        outputMint,
+        ownerPublicKey,
+        true,
+        outputTokenProgram,
+      )
       : null;
 
     const inputFeeConfig = inputIsToken0 ? ctx.feeConfig0 : ctx.feeConfig1;
@@ -1259,7 +1259,7 @@ export default function Swap() {
           await loadPrices();
           setStatus(null);
           setBusy(false);
-          
+
           if (wallet.publicKey) {
             triggerPoolsRefetch(wallet.publicKey.toBase58());
             logTransaction({
@@ -1352,7 +1352,7 @@ export default function Swap() {
           await loadPrices();
           setStatus(null);
           setBusy(false);
-          
+
           if (wallet.publicKey) {
             triggerPoolsRefetch(wallet.publicKey.toBase58());
             logTransaction({
@@ -1412,7 +1412,7 @@ export default function Swap() {
               setErrorDetails(null);
               return;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
         setStatus(
           "Transaction appears already processed; it likely executed successfully.",
@@ -1420,7 +1420,7 @@ export default function Swap() {
         setErrorDetails(null);
         return;
       }
-    } catch (e) {}
+    } catch (e) { }
     if (
       err instanceof SendTransactionError ||
       err?.name === "SendTransactionError"
@@ -1599,7 +1599,7 @@ export default function Swap() {
                                 title="Copy pool id"
                                 aria-label="Copy pool id"
                               >
-                                {copiedText === poolHoverInfo.poolId ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                                {copiedText === poolHoverInfo.poolId ? <span style={{ color: 'var(--app-accent)', fontWeight: 'bold' }}>✓</span> : <img src={copyIcon} alt="Copy" />}
                               </button>
                             </div>
                             <div className="swap-hover-row">
@@ -1613,7 +1613,7 @@ export default function Swap() {
                                 title="Copy token0"
                                 aria-label="Copy token0"
                               >
-                                {copiedText === poolHoverInfo.token0 ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                                {copiedText === poolHoverInfo.token0 ? <span style={{ color: 'var(--app-accent)', fontWeight: 'bold' }}>✓</span> : <img src={copyIcon} alt="Copy" />}
                               </button>
                             </div>
                             <div className="swap-hover-row">
@@ -1627,7 +1627,7 @@ export default function Swap() {
                                 title="Copy token1"
                                 aria-label="Copy token1"
                               >
-                                {copiedText === poolHoverInfo.token1 ? <span style={{color: 'var(--app-accent)', fontWeight: 'bold'}}>✓</span> : <img src={copyIcon} alt="Copy" />}
+                                {copiedText === poolHoverInfo.token1 ? <span style={{ color: 'var(--app-accent)', fontWeight: 'bold' }}>✓</span> : <img src={copyIcon} alt="Copy" />}
                               </button>
                             </div>
                           </div>

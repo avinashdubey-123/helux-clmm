@@ -968,7 +968,7 @@ export default function InitializeForm() {
                         <strong>{mint0Symbol}</strong>
                       </button>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(8, 17, 31, 0.4)', padding: '4px 8px', borderRadius: '8px' }}>
+                        <div className="clmm-balance-chip">
                           <img src={walletIcon} alt="wallet" className="clmm-wallet-icon" />
                           <span className="clmm-balance-value">{balance0 !== null ? balance0.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0.0'}</span>
                         </div>

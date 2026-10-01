@@ -1350,6 +1350,7 @@
 
 .admin-select-option:hover {
   background: var(--form-bg-hover);
+  filter: brightness(0.8);
 }
 
 .admin-select-option.selected {

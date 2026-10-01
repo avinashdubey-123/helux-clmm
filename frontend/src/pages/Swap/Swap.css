@@ -188,6 +188,7 @@
 
 .swap-pool-item:hover {
   background: var(--app-accent-soft);
+  filter: brightness(0.8);
 }
 
 .swap-pool-item.active {

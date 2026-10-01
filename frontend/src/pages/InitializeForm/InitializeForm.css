@@ -1238,7 +1238,6 @@
     height: 14px;
     opacity: 0.8;
     transition: opacity 0.2s;
-    filter: brightness(0) saturate(100%) invert(76%) sepia(93%) saturate(1034%) hue-rotate(2deg) brightness(103%) contrast(101%);
   }
 
   .clmm-inline-swap-btn:hover:not(:disabled) img {
@@ -1266,14 +1265,12 @@
   .clmm-lock-icon {
     width: 24px;
     height: 24px;
-    filter: brightness(0) saturate(100%) invert(76%) sepia(93%) saturate(1034%) hue-rotate(2deg) brightness(103%) contrast(101%);
   }
 
   .clmm-wallet-icon {
     width: 14px;
     height: 14px;
     opacity: 0.85;
-    filter: brightness(0) saturate(100%) invert(76%) sepia(93%) saturate(1034%) hue-rotate(2deg) brightness(103%) contrast(101%);
   }
 
   .clmm-balance-chip {
@@ -1282,7 +1279,7 @@
     gap: 4px;
     padding: 4px 8px;
     border-radius: 8px;
-    background: var(--app-accent-soft);
+    background: rgba(8, 17, 31, 0.4);
   }
 
   .clmm-balance-value {
@@ -1385,6 +1382,7 @@
 
 .clmm-select-option:hover {
   background: var(--form-bg-hover);
+  filter: brightness(0.8);
 }
 
 .clmm-select-option.selected {

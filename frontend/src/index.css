@@ -148,11 +148,6 @@ body {
     --font-size-md: 16px;
   }
 }
-
-#social .button-icon {
-  filter: invert(1) brightness(2)
-}
-
 #root {
   max-width: 100%;
   margin: 0 auto;
