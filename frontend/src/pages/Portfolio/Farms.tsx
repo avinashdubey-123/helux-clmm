@@ -14,6 +14,8 @@ import FarmPeriodPicker from '../../components/FarmPeriodPicker/FarmPeriodPicker
 import copyIcon from '../../assets/copy.svg';
 import Loader from '../../components/Loader/Loader';
 import './Portfolio.css';
+import { getTokenDisplay } from '../../utils/token';
+import { useTokenMetadata } from '../../hooks/useTokenMetadata';
 
 // A single reward row component
 function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardInfo: any, rewardIndex: number }) {
@@ -357,9 +359,9 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
     } finally { setBusy(false); }
   };
 
-  const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase();
-  const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase();
-  const tokenAbbr = rewardInfo.tokenMint.slice(0, 4).toUpperCase();
+  const tokenMetadata = useTokenMetadata([pool.tokenMint0, pool.tokenMint1, rewardInfo.tokenMint]);
+  const poolTitle = `${getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).poolName} - ${getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).poolName}`;
+  const tokenAbbr = getTokenDisplay(rewardInfo.tokenMint, tokenMetadata[rewardInfo.tokenMint]).symbol;
 
   return (
     <div className="portfolio-pool-card reward-stat-box farm-row-card">
@@ -373,7 +375,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
         <div className="farm-row-col">
           <span className="farm-row-label">Pool</span>
           <strong className="farm-row-value farm-row-title-flex">
-            {t0Name} - {t1Name}
+            {poolTitle}
             <button className="farm-copy-btn" onClick={handleCopyPool} title="Copy Pool Address">
               {copiedPool ? <span className="farm-copy-status">✓</span> : <img src={copyIcon} alt="copy" />}
             </button>
@@ -433,7 +435,7 @@ function FarmRow({ pool, rewardInfo, rewardIndex }: { pool: PoolRowData, rewardI
           <div className="portfolio-modal-content farm-edit-modal">
             <button className="portfolio-modal-close" onClick={() => setIsEditing(false)}>✕</button>
             <div className="portfolio-modal-header">
-              <h2>Edit Farm: {t0Name} - {t1Name}</h2>
+              <h2>Edit Farm: {poolTitle}</h2>
               <p className="portfolio-subtitle">Update parameters for your {tokenAbbr} reward farm.</p>
             </div>
             <div className="portfolio-modal-body farm-edit-body">

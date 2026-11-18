@@ -86,8 +86,24 @@ const calculateTicks = (min: number, max: number, maxTicks = 7) => {
   return ticks;
 }
 
+/**
+ * On-chain data only covers the tick arrays near the current price, so the curve would stop
+ * short of the visible price axis. Carry the nearest known liquidity out to both domain edges
+ * (the chart is a step function, so this just continues the last step).
+ * `data` must be sorted by ascending price.
+ */
+const extendToDomain = <T extends { price: number; liquidity: number }>(data: T[], min: number, max: number): T[] => {
+  if (data.length === 0) return data
+  const first = data[0]
+  const last = data[data.length - 1]
+  const extended = data.slice()
+  if (min < first.price) extended.unshift({ ...first, price: min })
+  if (max > last.price) extended.push({ ...last, price: max })
+  return extended
+}
+
 const StaticRechartsPlot = React.memo(({ liquidityData, animDomain, currentPrice, displayBaseLabel, width, height }: any) => (
-  <AreaChart width={width} height={height} data={liquidityData} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
+  <AreaChart width={width} height={height} data={extendToDomain(liquidityData, animDomain[0], animDomain[1])} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
     <defs>
       <linearGradient id="liquidityGrad" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="var(--app-chart)" stopOpacity={0.35} />

@@ -10,7 +10,10 @@ import { callWithRetry } from '../../utils/batchFetch'
 import { getAmmConfigAddress, getOperationAccountAddress, getSupportMintAssociatedAddress } from '../../utils/pda'
 import copyIcon from '../../assets/copy.svg'
 import './Admin.css'
-import { getShortTokenName, getPoolDisplayName } from '../../utils/token'
+import { getShortTokenName, getPoolDisplayName, getTokenDisplay } from '../../utils/token'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
+import { getTokenColor } from '../../utils/tokenRegistry'
+import TokenLogo from '../../components/TokenLogo/TokenLogo'
 import { useTransactions } from '../../contexts/TxContext'
 
 
@@ -23,15 +26,6 @@ let cachedSupportMints: Record<string, any>[] | null = null
 let cachedOperationAccount: Record<string, any> | null = null
 let cachedPools: Record<string, any>[] | null = null
 let initialFetchStarted = false
-
-function getTokenColor(symbol: string): string {
-  let hash = 0
-  for (let i = 0; i < symbol.length; i++) {
-    hash = symbol.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const hue = Math.abs(hash) % 360
-  return `hsl(${hue}, 65%, 40%)`
-}
 
 function PoolDisplay({ poolAddr, token0, token1 }: { poolAddr: string; token0?: string; token1?: string }) {
   const [hoverInfo, setHoverInfo] = useState<{ poolId?: string | null; token0?: string | null; token1?: string | null } | null>(null)
@@ -65,31 +59,34 @@ function PoolDisplay({ poolAddr, token0, token1 }: { poolAddr: string; token0?: 
     }
   }
 
+  const tokenMetadata = useTokenMetadata([token0, token1])
   const name0 = token0 ? getShortTokenName(token0) : 'UNKN'
   const name1 = token1 ? getShortTokenName(token1) : 'UNKN'
-  let displayName = getPoolDisplayName(token0, token1)
+  const display0 = token0 ? getTokenDisplay(token0, tokenMetadata[token0]) : undefined
+  const display1 = token1 ? getTokenDisplay(token1, tokenMetadata[token1]) : undefined
+  let displayName = getPoolDisplayName(token0, token1, tokenMetadata)
   if (token0 && token1) {
     const t0Pub = new PublicKey(token0)
     const t1Pub = new PublicKey(token1)
     if (Buffer.compare(t0Pub.toBuffer(), t1Pub.toBuffer()) > 0) {
-      displayName = getPoolDisplayName(token1, token0)
+      displayName = getPoolDisplayName(token1, token0, tokenMetadata)
     }
   }
 
   const getIconLabel = (symbol: string) => symbol.slice(0, 2).toUpperCase()
 
-  const color0 = getTokenColor(name0)
-  const color1 = getTokenColor(name1)
+  const color0 = token0 ? getTokenColor(token0) : '#555'
+  const color1 = token1 ? getTokenColor(token1) : '#555'
 
   return (
     <div className="lp-td-pool-inner" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: 0, justifyContent: 'flex-start' }}>
       <div className="lp-hover-wrapper" onMouseEnter={handleIconHover} onMouseLeave={handleIconLeave} style={{ display: 'inline-block', position: 'relative' }}>
         <div className="lp-pool-icons" style={{ cursor: 'pointer', display: 'flex' }} title="Hover to view pool info">
           <span className="lp-icon lp-icon-a" style={{ background: color0, zIndex: 1 }}>
-            {getIconLabel(name0)}
+            <TokenLogo image={display0?.image} fallback={getIconLabel(display0?.symbol ?? name0)} />
           </span>
           <span className="lp-icon lp-icon-b" style={{ background: color1 }}>
-            {getIconLabel(name1)}
+            <TokenLogo image={display1?.image} fallback={getIconLabel(display1?.symbol ?? name1)} />
           </span>
         </div>
         {hoverInfo && (
@@ -685,7 +682,10 @@ const Admin = () => {
                   <span className="center">Fund Owner</span>
                   <span className="center">Address</span>
                 </div>
-                {configs.map((c) => {
+                {[...configs]
+                  // Ascending by config index (the first column)
+                  .sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0))
+                  .map((c) => {
                   const configAddr = c.publicKey.toBase58()
                   const tickSpacing = c.tickSpacing?.toString?.() ?? c.tick_spacing?.toString?.() ?? '-'
                   const protocolOwner = c.owner?.toBase58?.() ?? c.protocolOwner?.toBase58?.() ?? ''

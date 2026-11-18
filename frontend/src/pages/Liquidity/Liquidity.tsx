@@ -15,6 +15,10 @@ import {
 import useProgram from "../../utils/useProgram";
 
 import { getProgramIdForCluster } from "../../constants";
+import { getTokenDisplay } from "../../utils/token";
+import { getTokenColor } from "../../utils/tokenRegistry";
+import { useTokenMetadata } from "../../hooks/useTokenMetadata";
+import TokenLogo from "../../components/TokenLogo/TokenLogo";
 
 const formatBalance = (amount?: number | null, decimals = 6) => {
   if (amount == null) return "-";
@@ -22,14 +26,6 @@ const formatBalance = (amount?: number | null, decimals = 6) => {
     minimumFractionDigits: Math.min(6, decimals),
     maximumFractionDigits: Math.min(6, decimals),
   });
-};
-
-const addressToColor = (addr: string) => {
-  const hash = addr
-    .split("")
-    .reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
-  const hue = hash % 360;
-  return `hsl(${hue},70%,58%)`;
 };
 
 function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
@@ -45,9 +41,12 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
     // The UI will rely on the cached pool.liquidity or pool.vault0Balance provided by the Context instead.
   }, []);
 
-  const token0Name = pool.tokenMint0.slice(0, 4).toUpperCase();
-  const token1Name = pool.tokenMint1.slice(0, 4).toUpperCase();
-  const displayName = `${token0Name}-${token1Name}`;
+  const tokenMetadata = useTokenMetadata([pool.tokenMint0, pool.tokenMint1]);
+  const token0 = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]);
+  const token1 = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]);
+  const token0Name = token0.symbol;
+  const token1Name = token1.symbol;
+  const displayName = `${token0.poolName}-${token1.poolName}`;
 
   let liquidityDisplay;
   if (pool.isActiveLiquidityLoading) {
@@ -58,8 +57,8 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
     liquidityDisplay = "...";
   }
 
-  const token0Color = addressToColor(pool.tokenMint0);
-  const token1Color = addressToColor(pool.tokenMint1);
+  const token0Color = getTokenColor(pool.tokenMint0);
+  const token1Color = getTokenColor(pool.tokenMint1);
 
   const clearHoverTimeout = () => {
     if (hoverTimeout.current != null) {
@@ -130,13 +129,13 @@ function PoolRow({ pool, navigate }: { pool: PoolRowData; navigate: any }) {
                 className="lp-icon lp-icon-a"
                 style={{ background: token0Color, zIndex: 1 }}
               >
-                {token0Name.slice(0, 4)}
+                <TokenLogo image={token0.image} fallback={token0Name.slice(0, 4)} />
               </span>
               <span
                 className="lp-icon lp-icon-b"
                 style={{ background: token1Color }}
               >
-                {token1Name.slice(0, 4)}
+                <TokenLogo image={token1.image} fallback={token1Name.slice(0, 4)} />
               </span>
             </div>
             {hoverInfo && (
@@ -294,12 +293,19 @@ const Liquidity = () => {
 
   const poolCount = useMemo(() => (pools ? pools.length : 0), [pools]);
 
+  const tokenMetadata = useTokenMetadata(
+    displayPools.flatMap((p) => [p.tokenMint0, p.tokenMint1]),
+  );
+
   const filteredPools = useMemo(() => {
     if (!searchQuery) return displayPools;
     const q = searchQuery.toLowerCase();
     return displayPools.filter((p) => {
-      const name =
-        `${p.tokenMint0.slice(0, 4)}-${p.tokenMint1.slice(0, 4)}`.toLowerCase();
+      const symbol0 = getTokenDisplay(p.tokenMint0, tokenMetadata[p.tokenMint0]).symbol;
+      const symbol1 = getTokenDisplay(p.tokenMint1, tokenMetadata[p.tokenMint1]).symbol;
+      const poolName0 = getTokenDisplay(p.tokenMint0, tokenMetadata[p.tokenMint0]).poolName;
+      const poolName1 = getTokenDisplay(p.tokenMint1, tokenMetadata[p.tokenMint1]).poolName;
+      const name = `${symbol0}-${symbol1} ${poolName0}-${poolName1}`.toLowerCase();
       return (
         p.poolPda.toLowerCase().includes(q) ||
         name.includes(q) ||
@@ -307,7 +313,7 @@ const Liquidity = () => {
         p.tokenMint1.toLowerCase().includes(q)
       );
     });
-  }, [displayPools, searchQuery]);
+  }, [displayPools, searchQuery, tokenMetadata]);
 
   return (
     <div className="lp-page">

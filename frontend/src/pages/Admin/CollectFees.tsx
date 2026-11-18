@@ -12,7 +12,8 @@ import {
     ASSOCIATED_TOKEN_PROGRAM_ID
 } from '@solana/spl-token'
 import useProgram from '../../utils/useProgram'
-import { getShortTokenName } from '../../utils/token'
+import { getTokenDisplay, txSymbol } from '../../utils/token'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
 import { useTransactions } from '../../contexts/TxContext'
 import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
 import { callWithRetry } from '../../utils/batchFetch'
@@ -114,6 +115,12 @@ export default function CollectFees() {
         fetchPool()
     }, [fetchPool])
 
+    const metadataPool = localPool || state?.pool
+    const tokenMetadata = useTokenMetadata([
+        metadataPool?.token0Mint?.toString(),
+        metadataPool?.token1Mint?.toString(),
+    ])
+
     if (!wallet.connected) {
         return <div className="admin-page">Please connect your wallet</div>
     }
@@ -147,8 +154,8 @@ export default function CollectFees() {
 
     const amount0Available = Number(fees0.toString()) / Math.pow(10, dec0)
     const amount1Available = Number(fees1.toString()) / Math.pow(10, dec1)
-    const t0Name = pool.token0Mint ? getShortTokenName(pool.token0Mint.toString()) : 'TOKEN0'
-    const t1Name = pool.token1Mint ? getShortTokenName(pool.token1Mint.toString()) : 'TOKEN1'
+    const t0Name = pool.token0Mint ? getTokenDisplay(pool.token0Mint.toString(), tokenMetadata[pool.token0Mint.toString()]).symbol : 'TOKEN0'
+    const t1Name = pool.token1Mint ? getTokenDisplay(pool.token1Mint.toString(), tokenMetadata[pool.token1Mint.toString()]).symbol : 'TOKEN1'
 
     const onConfirmCollection = async () => {
         if (!program || !wallet.publicKey || !pool) return
@@ -263,7 +270,7 @@ export default function CollectFees() {
                 signature: sig
             })
             setCollected(true)
-            addTransaction(sig, `Collected ${type} fees for ${t0Name}-${t1Name}`, 'Admin Action')
+            addTransaction(sig, `Collected ${type} fees for ${txSymbol(pool.token0Mint.toString(), tokenMetadata)}-${txSymbol(pool.token1Mint.toString(), tokenMetadata)}`, 'Admin Action')
         } catch (err: any) {
             console.error('Fee collection error:', err)
             let details = err.message || String(err)

@@ -1142,10 +1142,34 @@
   color: var(--app-ink);
 }
 
-.nft-overlay-icon {
-  font-size: 52px;
-  line-height: 1;
-  filter: drop-shadow(0 0 16px var(--app-accent-border));
+.nft-overlay-art {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 4px 0 2px;
+  border-radius: 28px;
+  box-shadow:
+    0 0 0 1px var(--app-accent-border),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0 0 48px var(--app-accent-soft);
+  animation: nftFloat 4.5s ease-in-out infinite;
+}
+
+.nft-overlay-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  user-select: none;
+}
+
+@keyframes nftFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nft-overlay-art { animation: none; }
 }
 
 .nft-overlay-title {
@@ -1183,6 +1207,13 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
+}
+
+.nft-detail-value-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .nft-detail-value {

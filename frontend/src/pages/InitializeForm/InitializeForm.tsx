@@ -9,11 +9,14 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { getObservationAddress, getPoolAddress, getPoolTickArrayBitmapAddress, getPoolVaultAddress, getPositionAddress, getTickArrayAddress } from '../../utils/pda'
 import { usePools } from '../../contexts/PoolsContext'
 import { useTransactions } from '../../contexts/TxContext'
-import { getShortTokenName } from '../../utils/token'
+import { getShortTokenName, LOADING_LABEL, txSymbol } from '../../utils/token'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
+import TokenLogo from '../../components/TokenLogo/TokenLogo'
 import { triggerPoolsRefetch } from '../../utils/cache'
 import { usePositions } from '../../hooks/usePositions'
 import TokenSelector from '../../components/TokenSelector/TokenSelector'
 import { useTokenRegistry } from '../../contexts/TokenRegistryContext'
+import { getTokenColor } from '../../utils/tokenRegistry'
 import swapIcon from '../../assets/swap.svg'
 import walletIcon from '../../assets/wallet.svg'
 import './InitializeForm.css'
@@ -106,10 +109,19 @@ export default function InitializeForm() {
   const token0 = useMemo(() => tokens.find(t => t.mint === mint0Address), [tokens, mint0Address])
   const token1 = useMemo(() => tokens.find(t => t.mint === mint1Address), [tokens, mint1Address])
 
-  const mint0Symbol = token0?.symbol || (mint0Address ? getShortTokenName(mint0Address) : 'Select Token A')
-  const mint1Symbol = token1?.symbol || (mint1Address ? getShortTokenName(mint1Address) : 'Select Token B')
-  const mint0Color = token0?.color || '#555'
-  const mint1Color = token1?.color || '#555'
+  const tokenMetadata = useTokenMetadata([mint0Address, mint1Address])
+  const mint0Meta = mint0Address ? tokenMetadata[mint0Address] : undefined
+  const mint1Meta = mint1Address ? tokenMetadata[mint1Address] : undefined
+
+  // `undefined` metadata = lookup still running: show a placeholder instead of the default name.
+  const mint0Loading = !!mint0Address && mint0Meta === undefined
+  const mint1Loading = !!mint1Address && mint1Meta === undefined
+  const mint0PoolName = mint0Loading ? LOADING_LABEL : mint0Meta?.name || ''
+  const mint1PoolName = mint1Loading ? LOADING_LABEL : mint1Meta?.name || ''
+  const mint0Symbol = mint0Loading ? LOADING_LABEL : mint0Meta?.symbol || token0?.symbol || (mint0Address ? getShortTokenName(mint0Address) : 'Select Token A')
+  const mint1Symbol = mint1Loading ? LOADING_LABEL : mint1Meta?.symbol || token1?.symbol || (mint1Address ? getShortTokenName(mint1Address) : 'Select Token B')
+  const mint0Color = mint0Address ? getTokenColor(mint0Address) : '#555'
+  const mint1Color = mint1Address ? getTokenColor(mint1Address) : '#555'
   const [priceUnit, setPriceUnit] = useState<PriceUnit>('token0')
   const [initialPrice, setInitialPrice] = useState('1')
   const [rangeMode, setRangeMode] = useState<RangeMode>('custom')
@@ -181,7 +193,7 @@ export default function InitializeForm() {
       try {
         const namespace = (program.account as any).ammConfig
         const loadedConfigs = typeof namespace?.all === 'function' ? await namespace.all() : []
-        const mappedConfigs = loadedConfigs.map((entry: any) => {
+        const mappedConfigs: AmmConfigTier[] = loadedConfigs.map((entry: any) => {
           const index = Number(entry.account.index?.toString?.() ?? entry.account.index ?? 0)
           const tickSpacing = Number(entry.account.tickSpacing?.toString?.() ?? entry.account.tick_spacing?.toString?.() ?? 1)
           const tradeFeeRate = Number(entry.account.tradeFeeRate?.toString?.() ?? entry.account.trade_fee_rate?.toString?.() ?? 0)
@@ -195,6 +207,8 @@ export default function InitializeForm() {
             label
           }
         })
+        // Lowest fee first (config index breaks ties) so the dropdown and default are predictable.
+        mappedConfigs.sort((a, b) => a.tradeFeeRate - b.tradeFeeRate || a.index - b.index)
 
         if (!cancelled) {
           setAmmConfigs(mappedConfigs)
@@ -700,13 +714,16 @@ export default function InitializeForm() {
           preflightCommitment: 'confirmed'
         })
         await connection.confirmTransaction({ signature: atomicSig, blockhash, lastValidBlockHeight }, 'confirmed')
-        addTransaction(atomicSig, `Created pool ${getShortTokenName(mint0.toBase58())}-${getShortTokenName(mint1.toBase58())}`, 'Create Pool', true)
+        addTransaction(atomicSig, `Created pool ${txSymbol(mint0.toBase58(), tokenMetadata)}-${txSymbol(mint1.toBase58(), tokenMetadata)}`, 'Create Pool', true)
 
         refreshPools()
         if (wallet.publicKey) {
           triggerPoolsRefetch(wallet.publicKey.toBase58())
         }
         refreshPositions()
+        // Pool created: clear the deposit amount fields
+        setDepositToken0('')
+        setDepositToken1('')
         setTxStatus({
           status: 'success',
           title: 'Pool created',
@@ -940,7 +957,7 @@ export default function InitializeForm() {
                 <div>
                   <span>Pool</span>
                   <div className="clmm-pool-display">
-                    <strong className="pool-name-hover" title={`${mint0Symbol} (${mint0Address.slice(0,6)}) - ${mint1Symbol} (${mint1Address.slice(0,6)})`}>{mint0Symbol} - {mint1Symbol}</strong>
+                    <strong className="pool-name-hover" title={`${mint0Symbol} (${mint0Address.slice(0,6)}) - ${mint1Symbol} (${mint1Address.slice(0,6)})`}>{mint0PoolName || mint0Symbol} - {mint1PoolName || mint1Symbol}</strong>
                   </div>
                 </div>
                 <div>
@@ -963,7 +980,7 @@ export default function InitializeForm() {
                     <div className="clmm-asset-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <button type="button" className="clmm-asset-pill">
                         <div className="clmm-token-avatar" style={{ backgroundColor: mint0Color }}>
-                          {mint0Symbol.slice(0, 2).toUpperCase()}
+                          <TokenLogo image={mint0Meta?.image} fallback={mint0Symbol.slice(0, 2).toUpperCase()} />
                         </div>
                         <strong>{mint0Symbol}</strong>
                       </button>
@@ -999,7 +1016,7 @@ export default function InitializeForm() {
                     <div className="clmm-asset-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <button type="button" className="clmm-asset-pill">
                         <div className="clmm-token-avatar" style={{ backgroundColor: mint1Color }}>
-                          {mint1Symbol.slice(0, 2).toUpperCase()}
+                          <TokenLogo image={mint1Meta?.image} fallback={mint1Symbol.slice(0, 2).toUpperCase()} />
                         </div>
                         <strong>{mint1Symbol}</strong>
                       </button>

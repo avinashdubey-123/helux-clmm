@@ -1,6 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTokenRegistry } from '../../contexts/TokenRegistryContext';
 import { useConnection } from '@solana/wallet-adapter-react';
+import { getTokenColor, matchesTokenQuery, withTokenMetadata } from '../../utils/tokenRegistry';
+import { useTokenMetadata } from '../../hooks/useTokenMetadata';
+import TokenLogo from '../TokenLogo/TokenLogo';
 import './TokenSelector.css';
 
 interface TokenSelectorProps {
@@ -10,7 +13,7 @@ interface TokenSelectorProps {
 }
 
 export default function TokenSelector({ selectedMint, onSelect, excludeMint }: TokenSelectorProps) {
-  const { tokens, searchTokens, addCustomToken, isLoading, error } = useTokenRegistry();
+  const { tokens, addCustomToken, isLoading, error } = useTokenRegistry();
   const { connection } = useConnection();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -28,13 +31,24 @@ export default function TokenSelector({ selectedMint, onSelect, excludeMint }: T
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const tokenMetadata = useTokenMetadata(tokens.map(t => t.mint));
+  const displayTokens = useMemo(
+    () => tokens.map(t => withTokenMetadata(t, tokenMetadata[t.mint])),
+    [tokens, tokenMetadata]
+  );
+
+  // Search both what's displayed (metadata) and the registry's own symbol/name, so tokens
+  // are findable while their metadata is still loading (when the display shows a placeholder).
   const filteredTokens = useMemo(() => {
-    return searchTokens(query).filter(t => t.mint !== excludeMint);
-  }, [searchTokens, query, excludeMint]);
+    const registryByMint = new Map(tokens.map(t => [t.mint, t]));
+    return displayTokens
+      .filter(t => t.mint !== excludeMint)
+      .filter(t => matchesTokenQuery(t, query) || matchesTokenQuery(registryByMint.get(t.mint) ?? t, query));
+  }, [tokens, displayTokens, query, excludeMint]);
 
   const selectedToken = useMemo(() => {
-    return tokens.find(t => t.mint === selectedMint);
-  }, [tokens, selectedMint]);
+    return displayTokens.find(t => t.mint === selectedMint);
+  }, [displayTokens, selectedMint]);
 
   const handleAdd = async () => {
     if (!query) return;
@@ -51,8 +65,8 @@ export default function TokenSelector({ selectedMint, onSelect, excludeMint }: T
       <button className="token-selector-trigger" type="button" onClick={() => setIsOpen(!isOpen)}>
         {selectedToken ? (
           <span className="token-selector-value">
-            <span className="token-selector-sphere" style={{ backgroundColor: selectedToken.color || '#555' }}>
-              {selectedToken.symbol.slice(0, 2).toUpperCase()}
+            <span className="token-selector-sphere" style={{ backgroundColor: getTokenColor(selectedToken.mint) }}>
+              <TokenLogo image={selectedToken.image} fallback={selectedToken.symbol.slice(0, 2).toUpperCase()} />
             </span>
             <strong>{selectedToken.symbol}</strong>
             <small>{selectedToken.mint.slice(0, 4)}...{selectedToken.mint.slice(-4)}</small>
@@ -90,8 +104,8 @@ export default function TokenSelector({ selectedMint, onSelect, excludeMint }: T
                   }}
                 >
                   <div className="token-selector-item-main">
-                    <span className="token-selector-sphere-small" style={{ backgroundColor: token.color || '#555' }}>
-                      {token.symbol.slice(0, 2).toUpperCase()}
+                    <span className="token-selector-sphere-small" style={{ backgroundColor: getTokenColor(token.mint) }}>
+                      <TokenLogo image={token.image} fallback={token.symbol.slice(0, 2).toUpperCase()} />
                     </span>
                     <strong>{token.symbol}</strong>
                     <span>{token.name}</span>

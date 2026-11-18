@@ -494,3 +494,23 @@
   .cf-actions { flex-direction: column-reverse; gap: 10px; }
   .cf-actions button { width: 100%; }
 }
+
+.cf-token-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--app-muted);
+}
+
+.cf-token-hint-found strong {
+  color: var(--app-ink);
+}
+
+.cf-token-hint-logo {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}

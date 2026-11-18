@@ -16,5 +16,4 @@ sdk/tools
 programs/amm/proptest-regressions
 implementationPlan.md
 docs
-/scripts
 .env

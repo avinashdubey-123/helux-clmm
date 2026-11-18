@@ -9,6 +9,8 @@ import useProgram from '../../utils/useProgram'
 import { useTransactions } from '../../contexts/TxContext'
 import { getTickArrayAddress, getPoolRewardVaultAddress } from '../../utils/pda'
 import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
+import { getTokenDisplay, txSymbol } from '../../utils/token'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
 
 function formatAmount(amount: number) {
   return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
@@ -48,8 +50,10 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
   const [busy, setBusy] = useState(false)
   const [txState, setTxState] = useState<{status: 'error', title: string, message: string, details?: string} | null>(null)
 
-  const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase()
-  const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase()
+  const tokenMetadata = useTokenMetadata([pool.tokenMint0, pool.tokenMint1])
+  const t0Name = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).symbol
+  const t1Name = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).symbol
+  const poolTitle = `${getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).poolName} - ${getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).poolName}`
 
   const { amount0: maxAmount0, amount1: maxAmount1 } = useMemo(() => getTokensFromLiquidity(
     position.liquidity,
@@ -263,7 +267,7 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
       })
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
       
-      addTransaction(signature, `Decreased liquidity in ${t0Name}/${t1Name} by ${percentage}%`)
+      addTransaction(signature, `Decreased liquidity in ${txSymbol(pool.tokenMint0, tokenMetadata)}/${txSymbol(pool.tokenMint1, tokenMetadata)} by ${percentage}%`)
       onSuccess()
       onClose()
     } catch (err: any) {
@@ -294,7 +298,7 @@ export default function DecreaseLiquidityModal({ pool, position, onClose, onSucc
       <div className="portfolio-modal-content withdraw-overlay">
         <button className="portfolio-modal-close" onClick={onClose}>✕</button>
         <div className="portfolio-modal-header">
-          <h2>Withdraw Liquidity from {t0Name} - {t1Name}</h2>
+          <h2>Withdraw Liquidity from {poolTitle}</h2>
           <p className="modal-withdraw-subtitle">Select the amount of liquidity you wish to withdraw.</p>
         </div>
 

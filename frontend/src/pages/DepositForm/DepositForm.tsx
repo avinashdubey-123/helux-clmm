@@ -14,8 +14,13 @@ import { usePools } from '../../contexts/PoolsContext'
 import { usePositions } from '../../hooks/usePositions'
 import { triggerPoolsRefetch } from '../../utils/cache'
 import walletIcon from '../../assets/wallet.svg'
+import nftArt from '../../assets/nft-position.svg'
 import { LiquidityChart } from '../../components/LiquidityChart/LiquidityChart'
 import './DepositForm.css'
+import { getTokenDisplay, txSymbol } from '../../utils/token'
+import { getTokenColor } from '../../utils/tokenRegistry'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
+import TokenLogo from '../../components/TokenLogo/TokenLogo'
 const METADATA_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 const MIN_TICK = -443636
 const MAX_TICK = 443636
@@ -71,12 +76,6 @@ const sqrtPriceX64ToTick = (sqrtPriceX64: number) => {
   const q64 = 2 ** 64
   const ratio = (sqrtPriceX64 / q64) ** 2
   return Math.log(ratio) / Math.log(1.0001)
-}
-/** Deterministic colour from a public-key string */
-const addressToColor = (addr: string) => {
-  const hash = addr.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0)
-  const hue = hash % 360
-  return `hsl(${hue},70%,58%)`
 }
 /** TICK_ARRAY_SIZE from on-chain: each TickArrayState holds 60 ticks */
 const TICK_ARRAY_SIZE = 60
@@ -246,19 +245,49 @@ const fetchOnChainLiquidity = async (
     return []
   }
 }
-/** Inline token badge: sphere + name (up to 4 chars) side by side */
-function TokenBadge({ mint, name, color }: { mint: PublicKey | null; name: string; color: string }) {
-  const label = mint ? mint.toBase58().slice(0, 2).toUpperCase() : name.slice(0, 2).toUpperCase()
-  const displayName = name.slice(0, 4)
+/** Inline token badge: sphere (logo or 2-char label) + symbol side by side */
+function TokenBadge({ mint, name, color, image }: { mint: PublicKey | null; name: string; color: string; image?: string }) {
+  const label = name.slice(0, 2).toUpperCase()
   return (
     <span className="df-token-badge">
       <span className="df-sphere" style={{ background: color }} title={mint?.toBase58()}>
-        {label}
+        <TokenLogo image={image} fallback={label} />
       </span>
-      <span className="df-token-name">{displayName}</span>
+      <span className="df-token-name">{name}</span>
     </span>
   )
 }
+/** One label/value row in the NFT overlay with a copy-to-clipboard button for the full value */
+function NftDetailRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard unavailable - ignore
+    }
+  }
+  return (
+    <div className="nft-overlay-detail">
+      <span className="nft-detail-label">{label}</span>
+      <span className="nft-detail-value-wrap">
+        <span className="nft-detail-value" title={value}>{value.slice(0, 8)}…{value.slice(-8)}</span>
+        <button
+          type="button"
+          className="deposit-copy-btn"
+          onClick={handleCopy}
+          title={`Copy ${label}`}
+          aria-label={`Copy ${label}`}
+        >
+          {copied ? <span className="copy-status-inline">✓</span> : <img src={copyIcon} alt="Copy" />}
+        </button>
+      </span>
+    </div>
+  )
+}
+
 /** NFT minted overlay */
 function NftOverlay({
   mintAddress,
@@ -276,17 +305,13 @@ function NftOverlay({
       <div className="nft-overlay-card">
         <button className="nft-overlay-close" onClick={onClose} aria-label="Close NFT overlay">✕</button>
         <div className="nft-overlay-glow" />
-        <div className="nft-overlay-icon">🎉</div>
+        <div className="nft-overlay-art">
+          <img src={nftArt} alt="Helux liquidity position NFT" draggable={false} />
+        </div>
         <h2 className="nft-overlay-title">Position NFT Minted!</h2>
         <p className="nft-overlay-subtitle">Your liquidity position NFT has been minted and sent to your wallet.</p>
-        <div className="nft-overlay-detail">
-          <span className="nft-detail-label">NFT Mint</span>
-          <span className="nft-detail-value">{mintAddress.slice(0, 8)}…{mintAddress.slice(-8)}</span>
-        </div>
-        <div className="nft-overlay-detail">
-          <span className="nft-detail-label">Position Account</span>
-          <span className="nft-detail-value">{positionAddress.slice(0, 8)}…{positionAddress.slice(-8)}</span>
-        </div>
+        <NftDetailRow label="NFT Mint" value={mintAddress} />
+        <NftDetailRow label="Position Account" value={positionAddress} />
         <a
           href={explorerUrl}
           target="_blank"
@@ -412,10 +437,16 @@ export default function DepositForm() {
   const currentTick = toNumber(pool?.tickCurrent ?? pool?.tick_current, 0)
   const sqrtPriceX64 = toNumber(pool?.sqrtPriceX64 ?? pool?.sqrt_price_x64, 0)
   // ── Token labels (2 chars for sphere, 4 chars for name) ──
-  const token0Label = tokenMint0 ? tokenMint0.toBase58().slice(0, 2).toUpperCase() : 'T0'
-  const token1Label = tokenMint1 ? tokenMint1.toBase58().slice(0, 2).toUpperCase() : 'T1'
-  const token0Name = tokenMint0 ? tokenMint0.toBase58().slice(0, 4).toUpperCase() : 'TK0'
-  const token1Name = tokenMint1 ? tokenMint1.toBase58().slice(0, 4).toUpperCase() : 'TK1'
+  const mint0Str = tokenMint0?.toBase58()
+  const mint1Str = tokenMint1?.toBase58()
+  const tokenMetadata = useTokenMetadata([mint0Str, mint1Str])
+  const token0 = mint0Str ? getTokenDisplay(mint0Str, tokenMetadata[mint0Str]) : null
+  const token1 = mint1Str ? getTokenDisplay(mint1Str, tokenMetadata[mint1Str]) : null
+  const token0Label = token0 ? token0.iconLabel : 'T0'
+  const token1Label = token1 ? token1.iconLabel : 'T1'
+  const token0Name = token0 ? token0.symbol : 'TK0'
+  const token1Name = token1 ? token1.symbol : 'TK1'
+  const poolTitle = token0 && token1 ? `${token0.poolName}/${token1.poolName}` : ''
   const formattedPool = useMemo(() => token0Name && token1Name ? `${token0Name}/${token1Name}` : '', [token0Name, token1Name])
 
   // Fetch user balances
@@ -478,10 +509,10 @@ export default function DepositForm() {
 
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const token0Color = useMemo(() => tokenMint0 ? addressToColor(tokenMint0.toBase58()) : 'hsl(200,70%,58%)', [tokenMint0])
+  const token0Color = useMemo(() => tokenMint0 ? getTokenColor(tokenMint0.toBase58()) : 'hsl(200,70%,58%)', [tokenMint0])
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  const token1Color = useMemo(() => tokenMint1 ? addressToColor(tokenMint1.toBase58()) : 'hsl(270,70%,58%)', [tokenMint1])
+  const token1Color = useMemo(() => tokenMint1 ? getTokenColor(tokenMint1.toBase58()) : 'hsl(270,70%,58%)', [tokenMint1])
   const poolTickEstimate = sqrtPriceX64 > 0 ? sqrtPriceX64ToTick(sqrtPriceX64) : currentTick
   // BUG FIX: Always prefer the exact tick from the on-chain pool over JS math estimation
   const priceTick = currentTick !== 0 ? currentTick : (Number.isFinite(poolTickEstimate) ? Math.round(poolTickEstimate) : 0)
@@ -609,9 +640,11 @@ export default function DepositForm() {
       clearTimeout(calcTimeoutRef.current);
     }
 
+    // Totals/ratio are stale until this recalculation lands: hide them from the moment it's scheduled
+    setIsCalculating(true);
+    // Claim the request id now so any calculation already in flight is discarded immediately
+    const currentRequestId = ++calcRequestIdRef.current;
     calcTimeoutRef.current = setTimeout(async () => {
-      const currentRequestId = ++calcRequestIdRef.current;
-      setIsCalculating(true);
 
       try {
         let freshPriceTick = priceTick;
@@ -634,6 +667,7 @@ export default function DepositForm() {
         if (activeField === 'amount0') {
           if (amount0.trim() === '') {
             setAmount1('')
+            prevCalcStateRef.current.amount1 = ''
           } else {
             const a0_raw = Number(amount0.replace(/,/g, '')) * Math.pow(10, decimals0)
             const L0 = a0_raw * (sqrtP * sqrtPU) / (sqrtPU - sqrtP)
@@ -648,6 +682,7 @@ export default function DepositForm() {
         } else if (activeField === 'amount1') {
           if (amount1.trim() === '') {
             setAmount0('')
+            prevCalcStateRef.current.amount0 = ''
           } else {
             const a1_raw = Number(amount1.replace(/,/g, '')) * Math.pow(10, decimals1)
             const L1 = a1_raw / (sqrtP - sqrtPL)
@@ -893,7 +928,7 @@ export default function DepositForm() {
       })
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
 
-      addTransaction(signature, `Deposited liquidity into ${token0Name} / ${token1Name}`, 'Deposit', true)
+      addTransaction(signature, `Deposited liquidity into ${mint0Str ? txSymbol(mint0Str, tokenMetadata) : token0Name} / ${mint1Str ? txSymbol(mint1Str, tokenMetadata) : token1Name}`, 'Deposit', true)
 
       const mintAddress = positionNftMint.publicKey.toBase58()
       const positionAddressStr = personalPosition.toBase58()
@@ -912,6 +947,10 @@ export default function DepositForm() {
 
       // Show NFT overlay
       setNftOverlay({ mintAddress, positionAddress: positionAddressStr })
+
+      // Deposit succeeded: clear the amount fields
+      setAmount0('')
+      setAmount1('')
 
       // Refresh on-chain data so chart reflects new deposit
       setRefreshTrigger(prev => prev + 1)
@@ -964,10 +1003,10 @@ export default function DepositForm() {
             <div className="deposit-hover-wrapper" onMouseEnter={showPoolHover} onMouseLeave={hidePoolHover}>
               <div className="deposit-pool-icons" style={{ cursor: 'pointer' }} title="Hover to view pool info">
                 <div className="deposit-symbol-sphere deposit-sphere-a" style={{ background: token0Color }} title={tokenMint0?.toBase58()}>
-                  {token0Label}
+                  <TokenLogo image={token0?.image} fallback={token0Label} />
                 </div>
                 <div className="deposit-symbol-sphere deposit-sphere-b" style={{ background: token1Color, marginLeft: '-12px' }} title={tokenMint1?.toBase58()}>
-                  {token1Label}
+                  <TokenLogo image={token1?.image} fallback={token1Label} />
                 </div>
               </div>
               {poolHoverVisible && pool && (
@@ -995,7 +1034,7 @@ export default function DepositForm() {
             </div>
             <div className="deposit-hero-copy">
               <div className="deposit-pool-name-row">
-                <h1>{formattedPool}</h1>
+                <h1>{poolTitle || formattedPool}</h1>
                 <span className="deposit-fee-pill">{feeTierLabel}</span>
               </div>
               <p>Open a unique position, deposit liquidity, and mint the NFT to your wallet in one transaction.</p>
@@ -1072,7 +1111,7 @@ export default function DepositForm() {
                 <div className={`deposit-token-card ${exceedBalance0 ? 'deposit-token-card-invalid' : ''}`} style={{ position: 'relative' }}>
                   <div className={depositMode === 'token1Only' ? 'is-locked-blur' : ''}>
                     <div className="deposit-token-top modal-token-top-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <TokenBadge mint={tokenMint0} name={token0Name} color={token0Color} />
+                      <TokenBadge mint={tokenMint0} name={token0Name} color={token0Color} image={token0?.image} />
                       <div className="deposit-balance-box">
                         <img src={walletIcon} alt="wallet" className="wallet-icon" />
                         <span>{formatAmount(balance0)}</span>
@@ -1114,7 +1153,7 @@ export default function DepositForm() {
                 <div className={`deposit-token-card ${exceedBalance1 ? 'deposit-token-card-invalid' : ''}`} style={{ position: 'relative' }}>
                   <div className={depositMode === 'token0Only' ? 'is-locked-blur' : ''}>
                     <div className="deposit-token-top modal-token-top-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <TokenBadge mint={tokenMint1} name={token1Name} color={token1Color} />
+                      <TokenBadge mint={tokenMint1} name={token1Name} color={token1Color} image={token1?.image} />
                       <div className="deposit-balance-box">
                         <img src={walletIcon} alt="wallet" className="wallet-icon" />
                         <span>{formatAmount(balance1)}</span>
@@ -1156,6 +1195,9 @@ export default function DepositForm() {
                 <div>
                   <span>Total Deposit</span>
                   <strong>
+                    {isCalculating ? (
+                      <span style={{ color: 'var(--app-muted)', fontWeight: 500 }}>Calculating…</span>
+                    ) : (<>
                     {depositMode !== 'token1Only' && (Number(amount0) || 0) > 0 && (
                       <span>{formatAmount(Number(amount0) || 0)} {token0Name}</span>
                     )}
@@ -1168,11 +1210,12 @@ export default function DepositForm() {
                     {(Number(amount0) || 0) === 0 && (Number(amount1) || 0) === 0 && (
                       <span style={{ color: 'var(--app-muted)' }}>0 {token0Name} + 0 {token1Name}</span>
                     )}
+                    </>)}
                   </strong>
                 </div>
                 <div>
                   <span>Deposit Ratio</span>
-                  <strong>{depositRatio}</strong>
+                  <strong>{isCalculating ? <span style={{ color: 'var(--app-muted)', fontWeight: 500 }}>Calculating…</span> : depositRatio}</strong>
                 </div>
               </div>
               <button className={`deposit-submit ${exceedBalance ? 'insufficient-balance-btn' : ''}`} type="button" disabled={loadingPools || !canSubmit || busy || exceedBalance || fetchingBalances} onClick={() => { void onDeposit() }} id="deposit-submit-btn">

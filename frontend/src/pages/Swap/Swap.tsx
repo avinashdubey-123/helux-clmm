@@ -26,6 +26,11 @@ import { checkAndClearPoolsRefetch, triggerPoolsRefetch, logTransaction } from "
 import { swapInternal } from "../../libs/swapSimulator";
 import { usePositions } from "../../hooks/usePositions";
 import { TICK_ARRAY_SIZE } from "../../libs/constants";
+import { getTokenDisplay, txSymbol } from "../../utils/token";
+import { getTokenColor } from "../../utils/tokenRegistry";
+import type { TokenMetadataRecord } from "../../utils/tokenMetadata";
+import { useTokenMetadata } from "../../hooks/useTokenMetadata";
+import TokenLogo from "../../components/TokenLogo/TokenLogo";
 import {
   getTransferFeeConfig,
   getTransferFee,
@@ -34,22 +39,24 @@ import {
 
 const BN = anchor.BN;
 
-function getShortTokenName(address: string | undefined | null) {
+/** Token symbol: metadata when available, otherwise the short mint-derived default. */
+function getShortTokenName(
+  address: string | undefined | null,
+  metadata?: TokenMetadataRecord,
+) {
   if (!address) return "UNK";
-  if (
-    address === "11111111111111111111111111111111" ||
-    address.toLowerCase() === "so11111111111111111111111111111111111111112"
-  )
-    return "SOL";
-  return address.slice(0, 4).toUpperCase();
+  return getTokenDisplay(address, metadata ? metadata[address] : null).symbol;
 }
 
 function getPoolDisplayName(
   token0: string | undefined | null,
   token1: string | undefined | null,
+  metadata?: TokenMetadataRecord,
 ) {
   if (!token0 || !token1) return "Unknown Pool";
-  return `${getShortTokenName(token0)}-${getShortTokenName(token1)}`;
+  const name0 = getTokenDisplay(token0, metadata ? metadata[token0] : null).poolName;
+  const name1 = getTokenDisplay(token1, metadata ? metadata[token1] : null).poolName;
+  return `${name0}-${name1}`;
 }
 
 function formatAmount(amount: number | string) {
@@ -77,15 +84,6 @@ type PoolData = {
 function getFeeFromTradeFeeRate(fee?: number) {
   if (fee === undefined || fee === null) return "-";
   return `${(fee / 10000).toFixed(2)}%`;
-}
-
-function getTokenColor(symbol: string): string {
-  let hash = 0;
-  for (let i = 0; i < symbol.length; i++) {
-    hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 65%, 40%)`;
 }
 
 export default function Swap() {
@@ -161,6 +159,10 @@ export default function Swap() {
       isActiveLiquidityLoading: p.isActiveLiquidityLoading,
     }));
   }, [displayPools, poolsData]);
+
+  const tokenMetadata = useTokenMetadata(
+    allPools.flatMap((p) => [p.token0, p.token1]),
+  );
 
   const [selectedPool, setSelectedPool] = useState<PoolData | null>(null);
   const [showPoolSelector, setShowPoolSelector] = useState(false);
@@ -369,15 +371,15 @@ export default function Swap() {
   const outputTokenLabel = "Output Token Amount";
   const inputTokenAddress = isToken0ToToken1 ? token0Str : token1Str;
   const outputTokenAddress = isToken0ToToken1 ? token1Str : token0Str;
-  const inputTokenShort = getShortTokenName(inputTokenAddress);
-  const outputTokenShort = getShortTokenName(outputTokenAddress);
-  const inputQuoteLabel = getShortTokenName(inputTokenAddress);
-  const outputQuoteLabel = getShortTokenName(outputTokenAddress);
+  const inputTokenShort = getShortTokenName(inputTokenAddress, tokenMetadata);
+  const outputTokenShort = getShortTokenName(outputTokenAddress, tokenMetadata);
+  const inputQuoteLabel = getShortTokenName(inputTokenAddress, tokenMetadata);
+  const outputQuoteLabel = getShortTokenName(outputTokenAddress, tokenMetadata);
 
   const getPoolLabel = () => {
     if (!activePool) return "Select Pool";
     if (token0Str && token1Str) {
-      return getPoolDisplayName(token0Str, token1Str);
+      return getPoolDisplayName(token0Str, token1Str, tokenMetadata);
     }
     return poolIdStr ? shorten(poolIdStr) : "Select Pool";
   };
@@ -503,12 +505,14 @@ export default function Swap() {
     if (!value || Number(value) <= 0) {
       setAmountOut("");
       setInsufficientLiquidity(false);
+      setIsQuoting(false);
       return;
     }
 
+    // Stale numbers must not show while the new quote is pending (debounce + request)
+    setIsQuoting(true);
     quoteTimeoutRef.current = setTimeout(async () => {
       const currentRequestId = ++quoteRequestIdRef.current;
-      setIsQuoting(true);
       try {
         const quote = await quoteExactIn(value);
         if (currentRequestId === quoteRequestIdRef.current) {
@@ -543,12 +547,14 @@ export default function Swap() {
     if (!value || Number(value) <= 0) {
       setAmountIn("");
       setInsufficientLiquidity(false);
+      setIsQuoting(false);
       return;
     }
 
+    // Stale numbers must not show while the new quote is pending (debounce + request)
+    setIsQuoting(true);
     quoteTimeoutRef.current = setTimeout(async () => {
       const currentRequestId = ++quoteRequestIdRef.current;
-      setIsQuoting(true);
       try {
         const quote = await quoteExactOut(value);
         if (currentRequestId === quoteRequestIdRef.current) {
@@ -1260,6 +1266,13 @@ export default function Swap() {
           setStatus(null);
           setBusy(false);
 
+          // Swap succeeded: clear the amount fields
+
+          setAmountIn("");
+
+          setAmountOut("");
+
+
           if (wallet.publicKey) {
             triggerPoolsRefetch(wallet.publicKey.toBase58());
             logTransaction({
@@ -1270,7 +1283,7 @@ export default function Swap() {
               signature: tx,
               status: 'success'
             });
-            addTransaction(tx, `Swapped ${getShortTokenName(direction.inputMint.toBase58())} for ${getShortTokenName(direction.outputMint.toBase58())}`, 'Swap', true);
+            addTransaction(tx, `Swapped ${txSymbol(direction.inputMint.toBase58(), tokenMetadata)} for ${txSymbol(direction.outputMint.toBase58(), tokenMetadata)}`, 'Swap', true);
             refreshPositions();
           }
           return;
@@ -1353,6 +1366,13 @@ export default function Swap() {
           setStatus(null);
           setBusy(false);
 
+          // Swap succeeded: clear the amount fields
+
+          setAmountIn("");
+
+          setAmountOut("");
+
+
           if (wallet.publicKey) {
             triggerPoolsRefetch(wallet.publicKey.toBase58());
             logTransaction({
@@ -1363,7 +1383,7 @@ export default function Swap() {
               signature: tx,
               status: 'success'
             });
-            addTransaction(tx, `Swapped ${getShortTokenName(direction.inputMint.toBase58())} for ${getShortTokenName(direction.outputMint.toBase58())}`, 'Swap', true);
+            addTransaction(tx, `Swapped ${txSymbol(direction.inputMint.toBase58(), tokenMetadata)} for ${txSymbol(direction.outputMint.toBase58(), tokenMetadata)}`, 'Swap', true);
             refreshPositions();
           }
         } catch (err: any) {
@@ -1478,9 +1498,11 @@ export default function Swap() {
     isInputBalanceExceeded || isOutputBalanceExceeded;
   const hasValidSwapAmount =
     Number(cleanAmountIn || "0") > 0 || Number(cleanAmountOut || "0") > 0;
-  const colorIn = getTokenColor(inputTokenShort);
-  const colorOut = getTokenColor(outputTokenShort);
+  const colorIn = inputTokenAddress ? getTokenColor(inputTokenAddress) : "#555";
+  const colorOut = outputTokenAddress ? getTokenColor(outputTokenAddress) : "#555";
   const getIconLabel = (symbol: string) => symbol.slice(0, 2).toUpperCase();
+  const inputTokenImage = inputTokenAddress ? tokenMetadata[inputTokenAddress]?.image : undefined;
+  const outputTokenImage = outputTokenAddress ? tokenMetadata[outputTokenAddress]?.image : undefined;
 
   const canSubmitSwap =
     !busy && !!wallet.publicKey && hasValidSwapAmount && !activeBalanceExceeded && !isQuoting && !fetchingBalances;
@@ -1501,8 +1523,8 @@ export default function Swap() {
     priceImpact = (1 - executionPrice / currentSpotPrice) * 100;
   }
 
-  const priceToken0 = getShortTokenName(token0Str);
-  const priceToken1 = getShortTokenName(token1Str);
+  const priceToken0 = getShortTokenName(token0Str, tokenMetadata);
+  const priceToken1 = getShortTokenName(token1Str, tokenMetadata);
   const firstTokenSymbol = showInversePrice
     ? `${priceToken1}`
     : `${priceToken0}`;
@@ -1521,9 +1543,10 @@ export default function Swap() {
   const filteredPools = allPools.filter((pool) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase().trim();
-    const name0 = getShortTokenName(pool.token0).toLowerCase();
-    const name1 = getShortTokenName(pool.token1).toLowerCase();
+    const name0 = getShortTokenName(pool.token0, tokenMetadata).toLowerCase();
+    const name1 = getShortTokenName(pool.token1, tokenMetadata).toLowerCase();
     const poolName = `${name0}-${name1}`;
+    const fullPoolName = getPoolDisplayName(pool.token0, pool.token1, tokenMetadata).toLowerCase();
     const token0Mint = (pool.token0 || "").toLowerCase();
     const token1Mint = (pool.token1 || "").toLowerCase();
     const poolPda = (pool.poolPda || "").toLowerCase();
@@ -1532,6 +1555,7 @@ export default function Swap() {
       name0.includes(q) ||
       name1.includes(q) ||
       poolName.includes(q) ||
+      fullPoolName.includes(q) ||
       token0Mint.includes(q) ||
       token1Mint.includes(q) ||
       poolPda.includes(q)
@@ -1580,7 +1604,7 @@ export default function Swap() {
                         onMouseLeave={hidePoolHover}
                       >
                         <span className="swap-pool-name-display">
-                          {getPoolDisplayName(token0Str, token1Str)}
+                          {getPoolDisplayName(token0Str, token1Str, tokenMetadata)}
                         </span>
                         {poolHoverInfo && (
                           <div
@@ -1713,9 +1737,7 @@ export default function Swap() {
                           </div>
                         ) : (
                           filteredPools.map((pool) => {
-                            const name0 = getShortTokenName(pool.token0);
-                            const name1 = getShortTokenName(pool.token1);
-                            const poolName = `${name0}-${name1}`;
+                            const poolName = getPoolDisplayName(pool.token0, pool.token1, tokenMetadata);
                             const feeTier = getFeeFromTradeFeeRate(
                               pool.tradeFeeRate,
                             );
@@ -1756,7 +1778,7 @@ export default function Swap() {
                       <div className="pool-details-content">
                         <div className="pool-details-header">
                           <div className="pool-details-header__badge">
-                            {getPoolDisplayName(token0Str, token1Str)}
+                            {getPoolDisplayName(token0Str, token1Str, tokenMetadata)}
                           </div>
                           <div className="pool-details-header__fee">
                             {activePoolFeeTier} Fee
@@ -1780,7 +1802,7 @@ export default function Swap() {
                             <div className="pool-details-balances">
                               <div className="pool-balance-row">
                                 <span className="pool-balance-token">
-                                  {getShortTokenName(token0Str)}{" "}
+                                  {getShortTokenName(token0Str, tokenMetadata)}{" "}
                                 </span>
                                 <span className="pool-balance-amount">
                                   {userBalances?.token0 != null
@@ -1790,7 +1812,7 @@ export default function Swap() {
                               </div>
                               <div className="pool-balance-row">
                                 <span className="pool-balance-token">
-                                  {getShortTokenName(token1Str)}{" "}
+                                  {getShortTokenName(token1Str, tokenMetadata)}{" "}
                                 </span>
                                 <span className="pool-balance-amount">
                                   {userBalances?.token1 != null
@@ -1924,7 +1946,7 @@ export default function Swap() {
                               className="swap-token-logo-sphere"
                               style={{ backgroundColor: colorIn }}
                             >
-                              {getIconLabel(inputTokenShort)}
+                              <TokenLogo image={inputTokenImage} fallback={getIconLabel(inputTokenShort)} />
                             </div>
                             <span className="swap-token-symbol">
                               {inputTokenShort}
@@ -2028,7 +2050,7 @@ export default function Swap() {
                               className="swap-token-logo-sphere"
                               style={{ backgroundColor: colorOut }}
                             >
-                              {getIconLabel(outputTokenShort)}
+                              <TokenLogo image={outputTokenImage} fallback={getIconLabel(outputTokenShort)} />
                             </div>
                             <span className="swap-token-symbol">
                               {outputTokenShort}
@@ -2085,7 +2107,7 @@ export default function Swap() {
                         </div>
                       </div>
 
-                      {hasValidSwapAmount && !insufficientLiquidity && (
+                      {hasValidSwapAmount && !insufficientLiquidity && !isQuoting && (
                         <div
                           style={{
                             marginBottom: "16px",

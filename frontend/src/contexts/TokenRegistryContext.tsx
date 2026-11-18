@@ -12,6 +12,7 @@ import {
   TokenRegistryEntry,
   searchTokenRegistry,
 } from "../utils/tokenRegistry";
+import { waitForTokenMetadata } from "../utils/tokenMetadata";
 
 interface TokenRegistryContextState {
   tokens: TokenRegistryEntry[];
@@ -47,6 +48,9 @@ export function TokenRegistryProvider({
       setError(null);
       try {
         const entry = await addTokenToRegistry(connection, mint);
+        // Keep the button loading until the token's metadata is found or confirmed absent,
+        // so the default name never flashes before real metadata arrives.
+        if (entry) await waitForTokenMetadata(connection, entry.mint);
         setTokens(getTokenRegistry());
         return entry;
       } catch (err: any) {

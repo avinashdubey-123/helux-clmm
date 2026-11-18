@@ -14,6 +14,11 @@ import TxSmallCard from '../../components/TxSmallCard/TxSmallCard';
 import FarmPeriodPicker from '../../components/FarmPeriodPicker/FarmPeriodPicker';
 import copyIcon from '../../assets/copy.svg';
 import './CreateFarm.css';
+import { getTokenDisplay } from '../../utils/token';
+import { getTokenColor } from '../../utils/tokenRegistry';
+import { useTokenMetadata } from '../../hooks/useTokenMetadata';
+import TokenLogo from '../../components/TokenLogo/TokenLogo';
+import type { TokenMetadataRecord } from '../../utils/tokenMetadata';
 
 interface RewardForm {
   tokenMint: string;
@@ -28,6 +33,30 @@ const formatToDDMMYYYY = (dateString: string) => {
   if (isNaN(d.getTime())) return '';
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 };
+
+function isValidMint(mint: string) {
+  try {
+    new PublicKey(mint);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Shows the pasted reward token's metadata name once looked up; nothing if it has none. */
+function RewardTokenInfo({ mint, metadata }: { mint: string; metadata: TokenMetadataRecord }) {
+  if (!mint || !isValidMint(mint)) return null;
+  const meta = metadata[mint];
+  if (meta === undefined) return <div className="cf-token-hint">Looking up token…</div>;
+  if (!meta || (!meta.name && !meta.symbol)) return null;
+  return (
+    <div className="cf-token-hint cf-token-hint-found">
+      {meta.image && <span className="cf-token-hint-logo"><TokenLogo image={meta.image} fallback={null} /></span>}
+      <strong>{meta.name ?? meta.symbol}</strong>
+      {meta.name && meta.symbol && <span>({meta.symbol})</span>}
+    </div>
+  );
+}
 
 export default function CreateFarm() {
   const navigate = useNavigate();
@@ -72,6 +101,10 @@ export default function CreateFarm() {
 
   // Filter pools to only those created by the current user
   const myPools = pools.filter(p => p.poolCreator === publicKey?.toBase58());
+  const tokenMetadata = useTokenMetadata([
+    ...myPools.flatMap(p => [p.tokenMint0, p.tokenMint1]),
+    ...rewards.map(r => r.tokenMint.trim()),
+  ]);
 
   const handleNext = () => {
     setStep(s => Math.min(s + 1, 3));
@@ -301,11 +334,6 @@ export default function CreateFarm() {
     }
   };
 
-  const addressToColor = (addr: string) => {
-    const hash = addr.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
-    return `hsl(${hash % 360},70%,58%)`;
-  };
-
   return (
     <div className="cf-page">
       <div className="cf-main">
@@ -388,8 +416,10 @@ export default function CreateFarm() {
                 ) : (
                   <div className="cf-pool-select-wrap">
                     {myPools.map(pool => {
-                      const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase();
-                      const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase();
+                      const token0 = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]);
+                      const token1 = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]);
+                      const t0Name = token0.symbol;
+                      const t1Name = token1.symbol;
                       return (
                         <div 
                           key={pool.poolPda} 
@@ -397,11 +427,11 @@ export default function CreateFarm() {
                           onClick={() => setSelectedPool(pool)}
                         >
                           <div className="cf-pool-icons">
-                            <div className="cf-pool-icon" style={{ background: addressToColor(pool.tokenMint0), zIndex: 1 }}>{t0Name}</div>
-                            <div className="cf-pool-icon" style={{ background: addressToColor(pool.tokenMint1) }}>{t1Name}</div>
+                            <div className="cf-pool-icon" style={{ background: getTokenColor(pool.tokenMint0), zIndex: 1 }}><TokenLogo image={token0.image} fallback={t0Name} /></div>
+                            <div className="cf-pool-icon" style={{ background: getTokenColor(pool.tokenMint1) }}><TokenLogo image={token1.image} fallback={t1Name} /></div>
                           </div>
                           <div className="cf-pool-info">
-                            <div className="cf-pool-name">{t0Name} - {t1Name}</div>
+                            <div className="cf-pool-name">{token0.poolName} - {token1.poolName}</div>
                             <div className="cf-pool-id">
                               Pool Address: <span className="cf-pool-accent">{pool.poolPda.slice(0, 4)}...{pool.poolPda.slice(-4)}</span>
                               <button className="cf-copy-btn" onClick={(e) => handleCopyPool(e, pool.poolPda)} title="Copy Pool Address">
@@ -463,6 +493,7 @@ export default function CreateFarm() {
                         value={reward.tokenMint}
                         onChange={(e) => updateReward(index, 'tokenMint', e.target.value)}
                       />
+                      <RewardTokenInfo mint={reward.tokenMint.trim()} metadata={tokenMetadata} />
                     </div>
 
                     <div className="cf-input-group cf-dates-row" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -523,7 +554,7 @@ export default function CreateFarm() {
                   <span className="cf-review-label">Pool</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="cf-review-value">
-                      {selectedPool.tokenMint0.slice(0, 4).toUpperCase()} - {selectedPool.tokenMint1.slice(0, 4).toUpperCase()}
+                      {getTokenDisplay(selectedPool.tokenMint0, tokenMetadata[selectedPool.tokenMint0]).poolName} - {getTokenDisplay(selectedPool.tokenMint1, tokenMetadata[selectedPool.tokenMint1]).poolName}
                     </span>
                     <span style={{ color: 'var(--app-accent)', fontSize: '13px' }}>
                       ({selectedPool.poolPda.slice(0, 4)}...{selectedPool.poolPda.slice(-4)})
@@ -543,6 +574,10 @@ export default function CreateFarm() {
                       <span className="cf-reward-slot-badge">
                         Farm Reward Slot {(selectedPool?.rewardInfos?.filter(r => r.initialized).length || 0) + i + 1} of 3
                       </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span className="cf-review-label">Token</span>
+                      <span className="cf-review-value">{getTokenDisplay(reward.tokenMint.trim(), tokenMetadata[reward.tokenMint.trim()]).name ?? getTokenDisplay(reward.tokenMint.trim(), tokenMetadata[reward.tokenMint.trim()]).symbol}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span className="cf-review-label">Token Mint</span>

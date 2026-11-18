@@ -7,7 +7,8 @@ import { PoolRowData } from '../../contexts/PoolsContext'
 import { PositionRowData } from '../../hooks/usePositions'
 import useProgram from '../../utils/useProgram'
 import LockIcon from '../../assets/lock.svg'
-import { getTokenBalance } from '../../utils/token'
+import { getTokenBalance, getTokenDisplay, txSymbol } from '../../utils/token'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
 import { useTransactions } from '../../contexts/TxContext'
 import { getTickArrayAddress, getPoolRewardVaultAddress } from '../../utils/pda'
 import TxSmallCard from '../../components/TxSmallCard/TxSmallCard'
@@ -59,8 +60,10 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
   const calcTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const prevCalcStateRef = useRef({ amount0: '', amount1: '' })
 
-  const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase()
-  const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase()
+  const tokenMetadata = useTokenMetadata([pool.tokenMint0, pool.tokenMint1])
+  const t0Name = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).symbol
+  const t1Name = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).symbol
+  const poolTitle = `${getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).poolName} - ${getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).poolName}`
 
   const lowerPrice = tickToPrice(position.tickLower)
   const upperPrice = tickToPrice(position.tickUpper)
@@ -131,9 +134,11 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
 
     if (calcTimeoutRef.current) clearTimeout(calcTimeoutRef.current);
 
+    // Totals/ratio are stale until this recalculation lands: hide them from the moment it's scheduled
+    setIsCalculating(true);
+    // Claim the request id now so any calculation already in flight is discarded immediately
+    const currentRequestId = ++calcRequestIdRef.current;
     calcTimeoutRef.current = setTimeout(async () => {
-      const currentRequestId = ++calcRequestIdRef.current;
-      setIsCalculating(true);
 
       try {
         let freshTick = currentTick;
@@ -154,25 +159,32 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
         if (activeField === 'amount0') {
           if (!amount0 || amount0.trim() === '') {
             setAmount1('')
+            prevCalcStateRef.current.amount1 = ''
           } else {
             const a0_raw = Number(amount0) * Math.pow(10, pool.mintDecimals0)
             const L0 = a0_raw * (sqrtP * sqrtPU) / (sqrtPU - sqrtP)
             const a1_raw = L0 * (sqrtP - sqrtPL)
             const nextAmount1 = a1_raw / Math.pow(10, pool.mintDecimals1)
             if (Number.isFinite(nextAmount1)) {
-              setAmount1(nextAmount1.toFixed(6).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+              const formatted = nextAmount1.toFixed(6).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1')
+              setAmount1(formatted)
+              // Record the computed value so focusing that field later isn't mistaken for an edit
+              prevCalcStateRef.current.amount1 = formatted
             }
           }
         } else {
           if (!amount1 || amount1.trim() === '') {
             setAmount0('')
+            prevCalcStateRef.current.amount0 = ''
           } else {
             const a1_raw = Number(amount1) * Math.pow(10, pool.mintDecimals1)
             const L1 = a1_raw / (sqrtP - sqrtPL)
             const a0_raw = L1 * (sqrtPU - sqrtP) / (sqrtP * sqrtPU)
             const nextAmount0 = a0_raw / Math.pow(10, pool.mintDecimals0)
             if (Number.isFinite(nextAmount0)) {
-              setAmount0(nextAmount0.toFixed(6).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1'))
+              const formatted = nextAmount0.toFixed(6).replace(/\.0+$/, '').replace(/(\.[0-9]*?)0+$/, '$1')
+              setAmount0(formatted)
+              prevCalcStateRef.current.amount0 = formatted
             }
           }
         }
@@ -341,7 +353,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       })
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
 
-      addTransaction(signature, `Increased liquidity in ${t0Name}/${t1Name}`)
+      addTransaction(signature, `Increased liquidity in ${txSymbol(pool.tokenMint0, tokenMetadata)}/${txSymbol(pool.tokenMint1, tokenMetadata)}`)
       onSuccess()
       onClose()
     } catch (err: any) {
@@ -372,7 +384,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
       <div className="portfolio-modal-content deposit-overlay">
         <button className="portfolio-modal-close" onClick={onClose}>✕</button>
         <div className="portfolio-modal-header">
-          <h2>Add Liquidity to {t0Name} - {t1Name}</h2>
+          <h2>Add Liquidity to {poolTitle}</h2>
           <div className={`position-status-badge ${inRange ? 'in-range' : 'out-range'} position-badge-margin`}>
             <span className="status-dot"></span>{inRange ? 'In Range' : 'Out of Range'}
           </div>
@@ -387,7 +399,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
             </div>
             <div className="deposit-overlay-stat">
               <span className="deposit-overlay-label">Deposit Ratio</span>
-              <span className="deposit-overlay-value">{depositRatio}</span>
+              <span className="deposit-overlay-value">{isCalculating ? <span style={{ color: 'var(--app-muted)', fontWeight: 500 }}>Calculating…</span> : depositRatio}</span>
             </div>
 
           </div>
@@ -468,7 +480,7 @@ export default function IncreaseLiquidityModal({ pool, position, onClose, onSucc
 
           <div className="deposit-total-card modal-deposit-total">
             <span>Total Deposit</span>
-            <strong>{formatAmount(a0Num)} {t0Name} + {formatAmount(a1Num)} {t1Name}</strong>
+            <strong>{isCalculating ? <span style={{ color: 'var(--app-muted)', fontWeight: 500 }}>Calculating…</span> : <>{formatAmount(a0Num)} {t0Name} + {formatAmount(a1Num)} {t1Name}</>}</strong>
           </div>
 
           {txState && (

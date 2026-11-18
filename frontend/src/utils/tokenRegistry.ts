@@ -1,4 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import type { TokenMetadata } from "./tokenMetadata";
+import { LOADING_LABEL } from "./token";
 
 
 export interface TokenRegistryEntry {
@@ -90,6 +92,26 @@ const DEFAULT_TOKENS: TokenRegistryEntry[] = [
   }
 ]
 
+const DEFAULT_TOKEN_COLORS = new Map(
+  DEFAULT_TOKENS.filter(t => t.color).map(t => [t.mint, t.color as string])
+);
+
+/** Deterministic colour derived from a mint address (same for a token on every page). */
+function hashColor(mint: string): string {
+  const hash = mint
+    .split("")
+    .reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
+  return `hsl(${hash % 360}, 70%, 58%)`;
+}
+
+/**
+ * The one colour used for a token everywhere (icons, spheres, avatars):
+ * the registry's hand-picked colour for known tokens, otherwise derived from the mint.
+ */
+export function getTokenColor(mint: string): string {
+  return DEFAULT_TOKEN_COLORS.get(mint) ?? hashColor(mint);
+}
+
 export function getTokenRegistry(): TokenRegistryEntry[] {
   try {
     const localStr = localStorage.getItem("customTokenRegistry");
@@ -130,18 +152,13 @@ export async function addTokenToRegistry(
 
   // We could fetch on-chain metadata here if desired.
   // For now, we fallback to a derived name.
-  // generate fallback color based on address hash
-  const hash = mint
-    .split("")
-    .reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0);
-  const hue = hash % 360;
 
   const entry: TokenRegistryEntry = {
     mint,
     symbol: mint.slice(0, 4).toUpperCase(),
     name: "Custom Token",
     decimals: 6, // default assumption if unknown
-    color: `hsl(${hue}, 72%, 58%)`,
+    color: getTokenColor(mint),
   };
 
   const newRegistry = [...current, entry];
@@ -153,16 +170,46 @@ export async function addTokenToRegistry(
   return entry;
 }
 
-export function searchTokenRegistry(
-  query: string,
-  tokens: TokenRegistryEntry[]
-): TokenRegistryEntry[] {
-  if (!query) return tokens;
+export interface DisplayTokenEntry extends TokenRegistryEntry {
+  image?: string;
+}
+
+/**
+ * Overlays resolved metadata onto a registry entry for display.
+ * Registry values (and color) are kept whenever a metadata field is missing.
+ */
+export function withTokenMetadata(
+  entry: TokenRegistryEntry,
+  meta: TokenMetadata | null | undefined
+): DisplayTokenEntry {
+  // Lookup still running: don't show the registry's default name/symbol yet.
+  if (meta === undefined) {
+    return { ...entry, symbol: LOADING_LABEL, name: "" };
+  }
+  if (meta === null) return entry;
+  return {
+    ...entry,
+    symbol: meta.symbol ?? entry.symbol,
+    name: meta.name ?? entry.name,
+    image: meta.image,
+  };
+}
+
+/** True if the query (case-insensitive) is part of the token's symbol, name or mint. */
+export function matchesTokenQuery(token: TokenRegistryEntry, query: string): boolean {
+  if (!query) return true;
   const qStr = query.toLowerCase();
-  return tokens.filter(
-    t =>
-      t.symbol.toLowerCase().includes(qStr) ||
-      t.name.toLowerCase().includes(qStr) ||
-      t.mint.toLowerCase().includes(qStr)
+  return (
+    token.symbol.toLowerCase().includes(qStr) ||
+    token.name.toLowerCase().includes(qStr) ||
+    token.mint.toLowerCase().includes(qStr)
   );
+}
+
+export function searchTokenRegistry<T extends TokenRegistryEntry>(
+  query: string,
+  tokens: T[]
+): T[] {
+  if (!query) return tokens;
+  return tokens.filter(t => matchesTokenQuery(t, query));
 }

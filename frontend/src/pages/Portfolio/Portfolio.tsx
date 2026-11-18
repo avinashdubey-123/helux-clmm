@@ -17,6 +17,10 @@ import useProgram from '../../utils/useProgram'
 import { getTickArrayAddress } from '../../utils/pda'
 import copyIcon from '../../assets/copy.svg'
 import { getRealTimePendingReward } from '../../utils/rewardMath'
+import { getTokenDisplay, txSymbol } from '../../utils/token'
+import { getTokenColor } from '../../utils/tokenRegistry'
+import { useTokenMetadata } from '../../hooks/useTokenMetadata'
+import TokenLogo from '../../components/TokenLogo/TokenLogo'
 
 const clampTick = (tick: number, spacing: number, direction: 'down' | 'up') => {
   const safeSpacing = Math.max(1, spacing)
@@ -31,7 +35,7 @@ const tickArrayStartIndex = (tick: number, spacing: number) => {
   return Math.floor(tick / tickCount) * tickCount
 }
 
-function PoolIconHover({ pool, t0Name, t1Name, t0Color, t1Color }: { pool: PoolRowData, t0Name: string, t1Name: string, t0Color: string, t1Color: string }) {
+function PoolIconHover({ pool, t0Name, t1Name, t0Color, t1Color, t0Image, t1Image }: { pool: PoolRowData, t0Name: string, t1Name: string, t0Color: string, t1Color: string, t0Image?: string, t1Image?: string }) {
   const [hoverVisible, setHoverVisible] = useState(false)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const hoverTimeout = useRef<number | null>(null)
@@ -57,8 +61,8 @@ function PoolIconHover({ pool, t0Name, t1Name, t0Color, t1Color }: { pool: PoolR
   return (
     <div className="deposit-hover-wrapper" onMouseEnter={showHover} onMouseLeave={hideHover}>
       <div className="pool-icons">
-        <div className="pool-icon pool-icon-primary" style={{ '--pool-icon-color': t0Color } as CSSProperties}>{t0Name.slice(0, 2)}</div>
-        <div className="pool-icon pool-icon-secondary" style={{ '--pool-icon-color': t1Color } as CSSProperties}>{t1Name.slice(0, 2)}</div>
+        <div className="pool-icon pool-icon-primary" style={{ '--pool-icon-color': t0Color } as CSSProperties}><TokenLogo image={t0Image} fallback={t0Name.slice(0, 2)} /></div>
+        <div className="pool-icon pool-icon-secondary" style={{ '--pool-icon-color': t1Color } as CSSProperties}><TokenLogo image={t1Image} fallback={t1Name.slice(0, 2)} /></div>
       </div>
       {hoverVisible && (
         <div className="deposit-hover-card deposit-hover-card-portfolio">
@@ -84,12 +88,6 @@ function PoolIconHover({ pool, t0Name, t1Name, t0Color, t1Color }: { pool: PoolR
       )}
     </div>
   )
-}
-
-function addressToColor(addr: string) {
-  const hash = addr.split('').reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0, 0)
-  const hue = hash % 360
-  return `hsl(${hue},70%,58%)`
 }
 
 function tickToPrice(tick: number) {
@@ -228,6 +226,11 @@ export default function Portfolio() {
     return map
   }, [pools])
 
+  const tokenMetadata = useTokenMetadata(
+    pools.flatMap(p => [p.tokenMint0, p.tokenMint1, ...(p.rewardInfos ?? []).map(ri => ri.tokenMint)])
+  )
+  const tokenSymbol = (mint: string) => getTokenDisplay(mint, tokenMetadata[mint]).symbol
+
   // Group positions by pool
   const groupedPositions = useMemo(() => {
     const groups = new Map<string, PositionRowData[]>()
@@ -245,7 +248,11 @@ export default function Portfolio() {
     return Array.from(groupedPositions.keys()).filter(poolId => {
       const pool = poolsById.get(poolId)
       if (!pool) return false
-      const name = `${pool.tokenMint0.slice(0, 4)}-${pool.tokenMint1.slice(0, 4)}`.toLowerCase()
+      const symbol0 = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).symbol
+      const symbol1 = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).symbol
+      const poolName0 = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0]).poolName
+      const poolName1 = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1]).poolName
+      const name = `${symbol0}-${symbol1} ${poolName0}-${poolName1}`.toLowerCase()
       return (
         poolId.toLowerCase().includes(query) ||
         name.includes(query) ||
@@ -253,7 +260,7 @@ export default function Portfolio() {
         pool.tokenMint1.toLowerCase().includes(query)
       )
     })
-  }, [groupedPositions, poolsById, searchQuery])
+  }, [groupedPositions, poolsById, searchQuery, tokenMetadata])
 
   const [expandedPools, setExpandedPools] = useState<Set<string>>(new Set())
   const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set())
@@ -282,6 +289,7 @@ export default function Portfolio() {
   // Stats for Invested Assets
   const tokenStats = useMemo(() => {
     const tokens = new Map<string, Set<string>>() // tokenName -> Set of poolIds
+    const mintByName = new Map<string, string>() // tokenName -> mint (for metadata lookup)
     positions.forEach(pos => {
       const pool = poolsById.get(pos.poolId)
       if (pool) {
@@ -290,6 +298,8 @@ export default function Portfolio() {
 
         if (!tokens.has(t0Name)) tokens.set(t0Name, new Set())
         if (!tokens.has(t1Name)) tokens.set(t1Name, new Set())
+        if (!mintByName.has(t0Name)) mintByName.set(t0Name, pool.tokenMint0)
+        if (!mintByName.has(t1Name)) mintByName.set(t1Name, pool.tokenMint1)
 
         tokens.get(t0Name)!.add(pos.poolId)
         tokens.get(t1Name)!.add(pos.poolId)
@@ -297,6 +307,7 @@ export default function Portfolio() {
     })
     return Array.from(tokens.entries()).map(([tokenName, poolsSet]) => ({
       tokenName,
+      mint: mintByName.get(tokenName)!,
       poolCount: poolsSet.size
     }))
   }, [positions, poolsById])
@@ -311,9 +322,6 @@ export default function Portfolio() {
   const handleClosePosition = async (pos: PositionRowData, pool: PoolRowData) => {
     if (!program || !publicKey || !signTransaction) return
     setBusyClosing(pos.positionPda)
-
-    const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase()
-    const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase()
 
     try {
       const positionNftMint = new PublicKey(pos.nftMint)
@@ -346,7 +354,7 @@ export default function Portfolio() {
       })
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
 
-      addTransaction(signature, `Closed position for ${t0Name}/${t1Name}`)
+      addTransaction(signature, `Closed position for ${txSymbol(pool.tokenMint0, tokenMetadata)}/${txSymbol(pool.tokenMint1, tokenMetadata)}`)
       refreshPositions()
       refreshPools()
     } catch (err: any) {
@@ -376,9 +384,6 @@ export default function Portfolio() {
     if (!program || !publicKey || !signTransaction) return;
     setBusyClosing(pos.positionPda + '_harvest');
 
-    const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase();
-    const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase();
-
     try {
       const builder = await buildHarvestInstruction(pos, pool, program, publicKey, connection);
       const instruction = await builder.instruction();
@@ -396,7 +401,7 @@ export default function Portfolio() {
       });
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
       
-      addTransaction(signature, `Harvested rewards for ${t0Name}/${t1Name}`);
+      addTransaction(signature, `Harvested rewards for ${txSymbol(pool.tokenMint0, tokenMetadata)}/${txSymbol(pool.tokenMint1, tokenMetadata)}`);
       refreshPositions();
       refreshPools();
     } catch (err: any) {
@@ -470,24 +475,27 @@ export default function Portfolio() {
                 {tokenStats.length === 0 ? (
                   <div className="portfolio-empty-state">No tokens invested yet.</div>
                 ) : (
-                  tokenStats.map(stat => (
+                  tokenStats.map(stat => {
+                    const token = getTokenDisplay(stat.mint, tokenMetadata[stat.mint])
+                    return (
                     <div key={stat.tokenName} className="portfolio-token-row">
                       <div className="token-row-left">
-                        <div className="pool-icon" style={{ '--pool-icon-color': addressToColor(stat.tokenName) } as CSSProperties}>
-                          {stat.tokenName.slice(0, 2)}
+                        <div className="pool-icon" style={{ '--pool-icon-color': getTokenColor(stat.mint) } as CSSProperties}>
+                          <TokenLogo image={token.image} fallback={token.symbol.slice(0, 2)} />
                         </div>
-                        <strong className="token-name-strong">{stat.tokenName}</strong>
+                        <strong className="token-name-strong">{token.symbol}</strong>
                       </div>
                       <div className="token-row-right">
                         <button
                           className="token-pools-link"
-                          onClick={() => handleInvestedPoolClick(stat.tokenName)}
+                          onClick={() => handleInvestedPoolClick(token.symbol)}
                         >
                           {stat.poolCount} {stat.poolCount === 1 ? 'pool' : 'pools'} invested &rarr;
                         </button>
                       </div>
                     </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </div>
@@ -560,10 +568,12 @@ export default function Portfolio() {
                 const pool = poolsById.get(poolId)
                 if (!pool) return null
 
-                const t0Name = pool.tokenMint0.slice(0, 4).toUpperCase()
-                const t1Name = pool.tokenMint1.slice(0, 4).toUpperCase()
-                const t0Color = addressToColor(pool.tokenMint0)
-                const t1Color = addressToColor(pool.tokenMint1)
+                const token0 = getTokenDisplay(pool.tokenMint0, tokenMetadata[pool.tokenMint0])
+                const token1 = getTokenDisplay(pool.tokenMint1, tokenMetadata[pool.tokenMint1])
+                const t0Name = token0.symbol
+                const t1Name = token1.symbol
+                const t0Color = getTokenColor(pool.tokenMint0)
+                const t1Color = getTokenColor(pool.tokenMint1)
 
                 const isExpanded = expandedPools.has(poolId)
                 const poolPositions = groupedPositions.get(poolId) || []
@@ -575,8 +585,8 @@ export default function Portfolio() {
                       onClick={() => togglePool(poolId)}
                     >
                       <div className="pool-header-left">
-                        <PoolIconHover pool={pool} t0Name={t0Name} t1Name={t1Name} t0Color={t0Color} t1Color={t1Color} />
-                        <h3 className="pool-name">{t0Name} / {t1Name}</h3>
+                        <PoolIconHover pool={pool} t0Name={t0Name} t1Name={t1Name} t0Color={t0Color} t1Color={t1Color} t0Image={token0.image} t1Image={token1.image} />
+                        <h3 className="pool-name">{token0.poolName} / {token1.poolName}</h3>
                         <span className="pool-positions-count">
                           {poolPositions.length} position{poolPositions.length === 1 ? '' : 's'}
                         </span>
@@ -695,7 +705,7 @@ export default function Portfolio() {
                                             // Only show active rewards or rewards that aren't collected
                                             if (!isActive && rewardValue === 0) return null;
 
-                                            const farmTokenName = poolRewardInfo.tokenMint.slice(0, 4).toUpperCase();
+                                            const farmTokenName = tokenSymbol(poolRewardInfo.tokenMint);
 
                                             let displayAmount = "0.00";
                                             if ((rewardValue > 0 && rewardValue < 0.1) || (rewardValue === 0 && pos.liquidity !== '0' && isFarmStarted)) {
